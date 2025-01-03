@@ -85,6 +85,50 @@
       );
     };
 
+    // Add StoryCounter component
+    const StoryCounter = ({ storyNumber }) => {
+      const counterIds = {
+        '01': 'z6t2hgugk8b2f8wf6qu7e8na9jssc1m4',
+        '02': 'z6t2hgugk8b2f8wf6qu7e8na9jssc1m5',
+        '03': 'z6t2hgugk8b2f8wf6qu7e8na9jssc1m6',
+        '04': 'z6t2hgugk8b2f8wf6qu7e8na9jssc1m7',
+        '05': 'z6t2hgugk8b2f8wf6qu7e8na9jssc1m8',
+        '06': 'z6t2hgugk8b2f8wf6qu7e8na9jssc1m9',
+        '07': 'z6t2hgugk8b2f8wf6qu7e8na9jssc1n0',
+        '08': 'z6t2hgugk8b2f8wf6qu7e8na9jssc1n1',
+        '09': 'z6t2hgugk8b2f8wf6qu7e8na9jssc1n2',
+        '10': 'z6t2hgugk8b2f8wf6qu7e8na9jssc1n3',
+        '11': 'z6t2hgugk8b2f8wf6qu7e8na9jssc1n4',
+        '12': 'z6t2hgugk8b2f8wf6qu7e8na9jssc1n5'
+      };
+      
+      const counterId = counterIds[storyNumber];
+      
+      useEffect(() => {
+        const script = document.createElement('script');
+        script.type = 'text/javascript';
+        script.src = `https://counter6.optistats.ovh/private/counter.js?c=${counterId}&down=async`;
+        script.async = true;
+        
+        document.body.appendChild(script);
+        
+        return () => {
+          document.body.removeChild(script);
+        };
+      }, [counterId]);
+
+      return (
+        <div className="text-center p-2">
+          <div id={`sfc${counterId}`}></div>
+          <noscript>
+            <a href="https://www.freecounterstat.com" title="web counter">
+              <img src={`https://counter6.optistats.ovh/private/freecounterstat.php?c=${counterId}`} border="0" title="web counter" alt="web counter" />
+            </a>
+          </noscript>
+        </div>
+      );
+    };
+
     // Replace Card component with a div with Tailwind classes
     const Card = ({ children, className }) => (
       <div className={`bg-white shadow-md rounded-lg ${className}`}>
@@ -377,12 +421,8 @@
                 </button>
               </div>
               
-              {/* Bottom row: Stats */}
-              <div className="flex justify-center items-center p-2 text-xs text-gray-600">
-                <span>Leído {readCount[index] || 0} veces</span>
-                <span className="mx-1">•</span>
-                <span>Vistas: {pageStats[index] || 0}</span>
-              </div>
+              {/* Replace old stats with new counter */}
+              <StoryCounter storyNumber={String(index + 1).padStart(2, '0')} />
             </div>
           </div>
 
