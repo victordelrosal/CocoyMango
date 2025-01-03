@@ -230,9 +230,23 @@
                 className="p-2 hover:bg-gray-100 rounded-full"
                 aria-label="Change Font Family"
               >
-                {/* Stylized T Icon */}
-                <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-gray-600" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                  <text x="0" y="20" fontSize="20" fontWeight="bold" fontFamily="Arial, sans-serif">T</text>
+                <svg 
+                  xmlns="http://www.w3.org/2000/svg" 
+                  className={`w-6 h-6 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`} 
+                  viewBox="0 0 24 24"
+                >
+                  <text 
+                    x="50%" 
+                    y="50%" 
+                    dominantBaseline="middle" 
+                    textAnchor="middle"
+                    fontSize="18"
+                    fontFamily="Georgia, serif"
+                    fontWeight="bold"
+                    fill="currentColor"
+                  >
+                    T
+                  </text>
                 </svg>
               </button>
             </div>
