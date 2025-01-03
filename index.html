@@ -41,6 +41,50 @@
   <script type="text/babel">
     const { useState, useEffect } = React;
 
+    // Add Counter component
+    const Counter = ({ storyId }) => {
+      const counterId = `counter_${storyId}`;
+      const counterScriptId = `script_${storyId}`;
+      
+      useEffect(() => {
+        // Create and append the counter script
+        const script = document.createElement('script');
+        script.type = 'text/javascript';
+        script.src = `https://counter6.optistats.ovh/private/counter.js?c=${counterId}&down=async`;
+        script.async = true;
+        script.id = counterScriptId;
+        
+        // Only add the script if it doesn't already exist
+        if (!document.getElementById(counterScriptId)) {
+          document.body.appendChild(script);
+        }
+        
+        // Cleanup
+        return () => {
+          const existingScript = document.getElementById(counterScriptId);
+          if (existingScript) {
+            existingScript.remove();
+          }
+        };
+      }, [storyId]);
+
+      return (
+        <div className="text-center py-4">
+          <div id={counterId}></div>
+          <noscript>
+            <a href="https://www.freecounterstat.com" title="web counter">
+              <img 
+                src={`https://counter6.optistats.ovh/private/freecounterstat.php?c=${counterId}`} 
+                border="0" 
+                title="web counter" 
+                alt="web counter" 
+              />
+            </a>
+          </noscript>
+        </div>
+      );
+    };
+
     // Replace Card component with a div with Tailwind classes
     const Card = ({ children, className }) => (
       <div className={`bg-white shadow-md rounded-lg ${className}`}>
@@ -283,6 +327,9 @@
                   ))}
                 </div>
               )}
+
+              {/* Add Counter after story content */}
+              <Counter storyId={story.id} />
             </Card>
           </div>
 
