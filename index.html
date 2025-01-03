@@ -41,17 +41,19 @@
   <script type="text/babel">
     const { useState, useEffect } = React;
 
-    // Replace SimpleCounter with StaticCounter
+    // Stats counter with improved centering
     const StaticCounter = () => (
-      <div className="text-center p-2">
-        <a href="https://www.freecounterstat.com" title="free hit counters">
-          <img 
-            src="https://counter6.optistats.ovh/private/freecounterstat.php?c=kp79913cu5eaprplb72mlga1n4hfduja" 
-            border="0" 
-            title="free hit counters" 
-            alt="free hit counters"
-          />
-        </a>
+      <div className="flex justify-center items-center p-2 w-full">
+        <div className="flex justify-center">
+          <a href="https://www.freecounterstat.com" title="free hit counters">
+            <img 
+              src="https://counter6.optistats.ovh/private/freecounterstat.php?c=kp79913cu5eaprplb72mlga1n4hfduja" 
+              border="0" 
+              title="free hit counters" 
+              alt="free hit counters"
+            />
+          </a>
+        </div>
       </div>
     );
 
