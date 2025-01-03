@@ -60,6 +60,7 @@
       const [pageStats, setPageStats] = useState({});
       const [readCount, setReadCount] = useState({});
       const [storyContent, setStoryContent] = useState(null); // Content of the current story
+      const [storyTitle, setStoryTitle] = useState(""); // Add this state for the title
       const [isLoading, setIsLoading] = useState(false); // Loading state for fetching content
 
       const fontSizes = ['text-lg', 'text-xl', 'text-2xl', 'text-3xl', 'text-4xl'];
@@ -79,6 +80,7 @@
             })
             .then(data => {
               setStoryContent(data.content);
+              setStoryTitle(data.title); // Store the title from JSON
               setIsLoading(false);
               // Update page stats
               setPageStats(prev => ({
@@ -90,10 +92,12 @@
             .catch(error => {
               console.error(error);
               setStoryContent(["Error loading story content. Please try again later."]);
+              setStoryTitle("Error loading story");
               setIsLoading(false);
             });
         } else {
           setStoryContent(null);
+          setStoryTitle("");
         }
       }, [currentStoryIndex]);
 
@@ -186,7 +190,7 @@
           <div className="max-w-full mx-auto p-4 pb-16">
             <Card className="p-4">
               <h2 className={`text-2xl font-bold mb-4 text-center ${fontFamilies[fontFamily]}`}>
-                {story.title}
+                {storyTitle || "Loading..."} {/* Use the dynamic title */}
               </h2>
               
               {/* Story Image */}
