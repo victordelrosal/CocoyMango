@@ -41,25 +41,16 @@
       </div>
     );
 
-    const stories = [
-      {
-        id: 'la-gran-aventura',
-        title: "La Primera Gran Aventura Cuatro",
-        content: [
-          "Coco y Mango eran los mejores amigos, dos lagartijitas que vivían en Colima, México. Habían crecido juntos y compartían todos sus secretos. Pero los dos tenían algo en común que los hacía diferentes de las otras lagartijas: creían que eran cocodrilos.",
-          "Todos los días soñaban con una vida llena de grandes aventuras y gloria, como los magníficos cocodrilos. Coco y Mango soñaban con nadar en ríos embravecidos y explorar las profundidades de los mares. Así que, una noche, decidieron arriesgarse, dejar su hogar y emprender una gran aventura.",
-          "Las dos pequeñas lagartijas dejaron la seguridad de su hogar y viajaron durante días, enfrentando peligros y aventuras en el camino. Pero nada se comparó con el momento en que llegaron al más grandioso de los océanos, el Pacífico.",
-          "Se llenaron de emoción cuando se zambulleron en el agua, creyendo que eran los cocodrilos con los que siempre habían soñado ser. Nadaron y jugaron en las olas, maravillándose de su entorno. Retozaron en las cuevas submarinas y buscaron en las profundidades del océano maravillas nunca antes vistas.",
-          "Los dos amigos se divirtieron como nunca, pero demasiado pronto tuvieron que regresar a casa. Aunque eran dos lagartijas muy pequeñas, fueron lo suficientemente valientes para aventurarse en una increíble aventura, creyendo que eran las majestuosas criaturas que siempre habían imaginado.",
-          "Coco y Mango regresaron a casa con grandes historias que contar y un nuevo aprecio por el poder y la belleza del gran océano."
-        ]
-      },
-      ...Array(11).fill(null).map((_, index) => ({
-        id: `historia-${index + 2}`,
-        title: `Historia ${index + 2}`,
-        content: ["Contenido próximamente..."]
-      }))
-    ];
+    // Define the stories array dynamically
+    const stories = Array.from({ length: 12 }, (_, i) => {
+      const num = String(i + 1).padStart(2, '0');
+      return {
+        id: `historia${num}`,
+        title: `Historia ${i + 1}`,
+        txtFile: `historia${num}.txt`,
+        imgFile: `historia${num}.png`,
+      };
+    });
 
     const StoriesPage = () => {
       const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -68,16 +59,43 @@
       const [fontFamily, setFontFamily] = useState(0);
       const [pageStats, setPageStats] = useState({});
       const [readCount, setReadCount] = useState({});
+      const [storyContent, setStoryContent] = useState(null); // Content of the current story
+      const [isLoading, setIsLoading] = useState(false); // Loading state for fetching content
 
       const fontSizes = ['text-lg', 'text-xl', 'text-2xl', 'text-3xl', 'text-4xl'];
       const fontFamilies = ['font-sans', 'font-serif', 'font-mono', 'font-comic', 'font-rounded'];
 
+      // Fetch story content whenever currentStoryIndex changes
       useEffect(() => {
         if (currentStoryIndex >= 0) {
-          setPageStats(prev => ({
-            ...prev,
-            [currentStoryIndex]: (prev[currentStoryIndex] || 0) + 1
-          }));
+          const story = stories[currentStoryIndex];
+          setIsLoading(true);
+          fetch(story.txtFile)
+            .then(response => {
+              if (!response.ok) {
+                throw new Error(`Failed to load ${story.txtFile}`);
+              }
+              return response.text();
+            })
+            .then(text => {
+              // Split the text into paragraphs based on double newlines
+              const paragraphs = text.split(/\n\s*\n/).map(p => p.trim()).filter(p => p.length > 0);
+              setStoryContent(paragraphs);
+              setIsLoading(false);
+              // Update page stats
+              setPageStats(prev => ({
+                ...prev,
+                [currentStoryIndex]: (prev[currentStoryIndex] || 0) + 1
+              }));
+              // Update read count when a story is fully read (handled on navigation)
+            })
+            .catch(error => {
+              console.error(error);
+              setStoryContent(["Error loading story content. Please try again later."]);
+              setIsLoading(false);
+            });
+        } else {
+          setStoryContent(null);
         }
       }, [currentStoryIndex]);
 
@@ -108,8 +126,13 @@
                 <div
                   key={story.id}
                   onClick={() => setCurrentStoryIndex(index)}
-                  className="p-3 border rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
+                  className="p-3 border rounded-lg hover:bg-gray-50 cursor-pointer transition-colors flex items-center space-x-4"
                 >
+                  <img 
+                    src={story.imgFile} 
+                    alt={`Imagen de ${story.title}`} 
+                    className="w-16 h-16 object-cover rounded-md"
+                  />
                   <h2 className="text-lg">{story.title}</h2>
                 </div>
               ))}
@@ -129,6 +152,7 @@
                   onClick={() => adjustFontSize(false)}
                   className="p-2 hover:bg-gray-100 rounded-full"
                   disabled={fontSize === 0}
+                  aria-label="Decrease Font Size"
                 >
                   {/* MinusCircle Icon */}
                   <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -139,6 +163,7 @@
                   onClick={() => adjustFontSize(true)}
                   className="p-2 hover:bg-gray-100 rounded-full"
                   disabled={fontSize === fontSizes.length - 1}
+                  aria-label="Increase Font Size"
                 >
                   {/* PlusCircle Icon */}
                   <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -166,15 +191,30 @@
                 {story.title}
               </h2>
               
-              <div className="w-full h-40 bg-gray-100 rounded-lg mb-4 flex items-center justify-center">
-                <span className="text-gray-400">Ilustración</span>
+              {/* Story Image */}
+              <div className="w-full mb-4">
+                <img 
+                  src={story.imgFile} 
+                  alt={`Imagen de ${story.title}`} 
+                  className="w-full h-auto rounded-lg object-cover"
+                />
               </div>
-              
-              <div className={`space-y-4 leading-relaxed text-justify ${fontSizes[fontSize]} ${fontFamilies[fontFamily]}`}>
-                {story.content.map((paragraph, pIndex) => (
-                  <p key={pIndex}>{paragraph}</p>
-                ))}
-              </div>
+
+              {/* Loading Indicator */}
+              {isLoading ? (
+                <div className="flex justify-center items-center h-64">
+                  <svg className="animate-spin h-10 w-10 text-gray-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+                  </svg>
+                </div>
+              ) : (
+                <div className={`space-y-4 leading-relaxed text-justify ${fontSizes[fontSize]} ${fontFamilies[fontFamily]}`}>
+                  {storyContent && storyContent.map((paragraph, pIndex) => (
+                    <p key={pIndex}>{paragraph}</p>
+                  ))}
+                </div>
+              )}
             </Card>
           </div>
 
@@ -187,6 +227,7 @@
                   onClick={() => {
                     if (index > 0) {
                       setCurrentStoryIndex(index - 1);
+                      completeStory(index - 1);
                     }
                   }}
                   className={`p-2 hover:bg-gray-100 rounded-full transition-colors ${index === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
@@ -285,9 +326,13 @@
                       setCurrentStoryIndex(-1);
                       setIsMenuOpen(false);
                     }}
-                    className="cursor-pointer hover:text-blue-600 font-semibold"
+                    className="cursor-pointer hover:text-blue-600 font-semibold flex items-center space-x-2"
                   >
-                    Índice Principal
+                    {/* Home Icon */}
+                    <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M13 5v6h6" />
+                    </svg>
+                    <span>Índice Principal</span>
                   </div>
                   
                   <div className="h-px bg-gray-200 my-2" />
@@ -299,11 +344,15 @@
                         setCurrentStoryIndex(index);
                         setIsMenuOpen(false);
                       }}
-                      className={`cursor-pointer hover:text-blue-600 ${
-                        currentStoryIndex === index ? 'text-blue-600' : ''
+                      className={`cursor-pointer hover:text-blue-600 flex items-center space-x-2 ${
+                        currentStoryIndex === index ? 'text-blue-600 font-semibold' : ''
                       }`}
                     >
-                      {story.title}
+                      {/* Story Icon */}
+                      <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16h8M8 12h8m-8-4h8" />
+                      </svg>
+                      <span>{story.title}</span>
                     </div>
                   ))}
                 </div>
