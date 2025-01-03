@@ -47,8 +47,8 @@
       return {
         id: `historia${num}`,
         title: `Historia ${i + 1}`,
-        txtFile: `historia${num}.txt`,
-        imgFile: `historia${num}.png`,
+        jsonFile: `historias/historia${num}.json`,
+        imgFile: `imagenes/imagen${num}.png`,
       };
     });
 
@@ -70,17 +70,15 @@
         if (currentStoryIndex >= 0) {
           const story = stories[currentStoryIndex];
           setIsLoading(true);
-          fetch(story.txtFile)
+          fetch(story.jsonFile)
             .then(response => {
               if (!response.ok) {
-                throw new Error(`Failed to load ${story.txtFile}`);
+                throw new Error(`Failed to load ${story.jsonFile}`);
               }
-              return response.text();
+              return response.json();
             })
-            .then(text => {
-              // Split the text into paragraphs based on double newlines
-              const paragraphs = text.split(/\n\s*\n/).map(p => p.trim()).filter(p => p.length > 0);
-              setStoryContent(paragraphs);
+            .then(data => {
+              setStoryContent(data.content);
               setIsLoading(false);
               // Update page stats
               setPageStats(prev => ({
