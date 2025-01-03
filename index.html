@@ -41,39 +41,19 @@
   <script type="text/babel">
     const { useState, useEffect } = React;
 
-    // Replace both Counter components with a single SimpleCounter
-    const SimpleCounter = () => {
-      const counterId = 'sfcld74gh4ab9wkalb3a5tdb6qf94wnbdmx';
-      
-      useEffect(() => {
-        const script = document.createElement('script');
-        script.type = 'text/javascript';
-        script.src = 'https://counter6.optistats.ovh/private/counter.js?c=ld74gh4ab9wkalb3a5tdb6qf94wnbdmx&down=async';
-        script.async = true;
-        
-        document.body.appendChild(script);
-        
-        return () => {
-          document.body.removeChild(script);
-        };
-      }, []);
-
-      return (
-        <div className="text-center p-2">
-          <div id={counterId}></div>
-          <noscript>
-            <a href="https://www.freecounterstat.com" title="free hit counters">
-              <img 
-                src="https://counter6.optistats.ovh/private/freecounterstat.php?c=ld74gh4ab9wkalb3a5tdb6qf94wnbdmx" 
-                border="0" 
-                title="free hit counters" 
-                alt="free hit counters" 
-              />
-            </a>
-          </noscript>
-        </div>
-      );
-    };
+    // Replace SimpleCounter with StaticCounter
+    const StaticCounter = () => (
+      <div className="text-center p-2">
+        <a href="https://www.freecounterstat.com" title="free hit counters">
+          <img 
+            src="https://counter6.optistats.ovh/private/freecounterstat.php?c=ld74gh4ab9wkalb3a5tdb6qf94wnbdmx" 
+            border="0" 
+            title="free hit counters" 
+            alt="free hit counters"
+          />
+        </a>
+      </div>
+    );
 
     // Replace Card component with a div with Tailwind classes
     const Card = ({ children, className }) => (
@@ -319,7 +299,7 @@
               )}
 
               {/* Add Counter after story content */}
-              <SimpleCounter />
+              <StaticCounter />
             </Card>
           </div>
 
@@ -367,8 +347,8 @@
                 </button>
               </div>
               
-              {/* Replace old counter with new SimpleCounter */}
-              <SimpleCounter />
+              {/* Replace old counter with new StaticCounter */}
+              <StaticCounter />
             </div>
           </div>
 
