@@ -1,0 +1,40 @@
+{
+  "prd_version": "1.0",
+  "game": {
+    "id": 13,
+    "title": "El boleto número 13",
+    "component_name": "Game13Boleto",
+    "type": "Chase/Catch",
+    "story_connection": "The winning lottery ticket #13 is blowing away in the wind - catch it before it's gone!"
+  },
+  "target_file": "juegos.html",
+  "shared_components": ["GameWrapper", "GameIntroScreen", "GameEndScreen", "StarRating"],
+  "mechanics": {
+    "core_loop": "Chase and tap the ticket as it blows around the screen erratically",
+    "controls": {
+      "tap": "Tap on the ticket to catch it (must be precise)"
+    },
+    "ticket_behavior": {
+      "movement": "Floats and darts around screen unpredictably",
+      "wind_gusts": "Sudden gusts push ticket in random direction",
+      "speed_increase": "Gets faster over time",
+      "near_miss": "If tap is close but misses, ticket zooms away"
+    },
+    "rounds": 5,
+    "time_per_round_seconds": 15,
+    "catch_precision": "Must tap within ticket bounds"
+  },
+  "scoring": {
+    "catch_bonus": "20 - seconds_taken (faster = more points)",
+    "round_complete": 10,
+    "perfect_catch": 5,
+    "star_thresholds": { "1_star": 30, "2_stars": 60, "3_stars": 90 }
+  },
+  "visuals": {
+    "background": "Outdoor scene with wind effects (leaves, dust)",
+    "ticket": "Golden ticket with #13, flutters and spins",
+    "wind_indicator": "Leaves/debris showing wind direction",
+    "coco_mango": "At bottom looking up, react when ticket caught/missed"
+  },
+  "instructions_text": "¡Atrapa el boleto número 13! Toca el boleto antes de que se vuele. ¡Cuidado con el viento!"
+}

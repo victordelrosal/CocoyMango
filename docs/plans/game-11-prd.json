@@ -1,0 +1,47 @@
+{
+  "prd_version": "1.0",
+  "game": {
+    "id": 11,
+    "title": "El día de San Patricio",
+    "component_name": "Game11SanPatricio",
+    "type": "Hidden Object",
+    "story_connection": "Coco and Mango need to find their friend Patricio in town, then deliver a lucky clover to him"
+  },
+  "target_file": "juegos.html",
+  "shared_components": ["GameWrapper", "GameIntroScreen", "GameEndScreen", "StarRating"],
+  "mechanics": {
+    "core_loop": "Find hidden Patricio in busy town scenes, then find the clover to deliver to him",
+    "controls": {
+      "tap": "Tap on objects/characters to check if it's Patricio or the clover"
+    },
+    "phases": [
+      { "phase": 1, "task": "Find Patricio hiding in the scene", "rounds": 3 },
+      { "phase": 2, "task": "Find the lucky clover to deliver", "rounds": 3 }
+    ],
+    "scenes": [
+      { "id": "plaza", "name": "La plaza", "hiding_spots": 8 },
+      { "id": "mercado", "name": "El mercado", "hiding_spots": 10 },
+      { "id": "parque", "name": "El parque", "hiding_spots": 9 }
+    ],
+    "hints": {
+      "available": 3,
+      "effect": "Patricio/clover glows briefly"
+    },
+    "time_per_scene_seconds": 30,
+    "wrong_tap_penalty": -2
+  },
+  "scoring": {
+    "find_patricio": 20,
+    "find_clover": 15,
+    "time_bonus": "Remaining seconds",
+    "hint_penalty": -5,
+    "star_thresholds": { "1_star": 40, "2_stars": 70, "3_stars": 100 }
+  },
+  "visuals": {
+    "background": "Colorful Mexican town scene with many objects/characters",
+    "patricio": "Green lizard with shamrock hat, partially hidden",
+    "clover": "Four-leaf clover emoji ☘️, small and hidden",
+    "distractors": "Other lizards, objects, decorations"
+  },
+  "instructions_text": "¡Encuentra a Patricio escondido en el pueblo! Luego busca el trébol para dárselo."
+}

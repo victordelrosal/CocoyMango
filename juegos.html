@@ -5448,6 +5448,1734 @@
       );
     };
 
+    // ==================== GAME 11: EL DÍA DE SAN PATRICIO ====================
+    // Hidden object game - find Patricio hiding in town scenes, then find the clover
+
+    const Game11SanPatricio = ({ isPaused, onGameEnd }) => {
+      const [gameState, setGameState] = useState('intro'); // intro, playing, found, ended
+      const [score, setScore] = useState(0);
+      const [currentScene, setCurrentScene] = useState(0);
+      const [currentPhase, setCurrentPhase] = useState(1); // 1 = find Patricio, 2 = find clover
+      const [timeLeft, setTimeLeft] = useState(30);
+      const [hintsLeft, setHintsLeft] = useState(3);
+      const [showHint, setShowHint] = useState(false);
+      const [wrongTaps, setWrongTaps] = useState(0);
+      const [foundItems, setFoundItems] = useState([]); // track which items found
+      const [floatingTexts, setFloatingTexts] = useState([]);
+      const [showFoundAnimation, setShowFoundAnimation] = useState(false);
+      const [foundMessage, setFoundMessage] = useState('');
+      const timerRef = useRef(null);
+      const hintTimerRef = useRef(null);
+
+      // Scene configurations - each has hiding spots for Patricio and clover
+      const scenes = [
+        {
+          id: 'plaza',
+          name: 'La plaza',
+          bgGradient: 'from-amber-200 via-orange-100 to-yellow-200',
+          elements: [
+            { id: 'fountain', emoji: '⛲', x: 50, y: 60, size: 'text-6xl' },
+            { id: 'bench1', emoji: '🪑', x: 20, y: 70, size: 'text-4xl' },
+            { id: 'bench2', emoji: '🪑', x: 80, y: 70, size: 'text-4xl' },
+            { id: 'tree1', emoji: '🌳', x: 15, y: 40, size: 'text-5xl' },
+            { id: 'tree2', emoji: '🌳', x: 85, y: 35, size: 'text-5xl' },
+            { id: 'flower1', emoji: '🌺', x: 30, y: 80, size: 'text-3xl' },
+            { id: 'flower2', emoji: '🌸', x: 70, y: 85, size: 'text-3xl' },
+            { id: 'bird', emoji: '🐦', x: 25, y: 25, size: 'text-3xl' },
+          ],
+          patricioSpot: { x: 18, y: 48 }, // Behind tree1
+          cloverSpot: { x: 55, y: 75 }, // Near fountain
+        },
+        {
+          id: 'mercado',
+          name: 'El mercado',
+          bgGradient: 'from-red-200 via-orange-100 to-yellow-200',
+          elements: [
+            { id: 'stand1', emoji: '🏪', x: 25, y: 50, size: 'text-6xl' },
+            { id: 'stand2', emoji: '🏪', x: 75, y: 50, size: 'text-6xl' },
+            { id: 'fruit1', emoji: '🍎', x: 20, y: 65, size: 'text-3xl' },
+            { id: 'fruit2', emoji: '🍊', x: 30, y: 68, size: 'text-3xl' },
+            { id: 'fruit3', emoji: '🥭', x: 70, y: 65, size: 'text-3xl' },
+            { id: 'fruit4', emoji: '🍋', x: 80, y: 68, size: 'text-3xl' },
+            { id: 'cart', emoji: '🛒', x: 50, y: 75, size: 'text-5xl' },
+            { id: 'umbrella1', emoji: '☂️', x: 25, y: 35, size: 'text-4xl' },
+            { id: 'umbrella2', emoji: '☂️', x: 75, y: 35, size: 'text-4xl' },
+            { id: 'bag', emoji: '🛍️', x: 45, y: 80, size: 'text-3xl' },
+          ],
+          patricioSpot: { x: 48, y: 82 }, // Behind cart
+          cloverSpot: { x: 35, y: 62 }, // Among fruits
+        },
+        {
+          id: 'parque',
+          name: 'El parque',
+          bgGradient: 'from-green-200 via-emerald-100 to-teal-200',
+          elements: [
+            { id: 'slide', emoji: '🛝', x: 30, y: 55, size: 'text-5xl' },
+            { id: 'swing', emoji: '🎠', x: 70, y: 55, size: 'text-5xl' },
+            { id: 'tree1', emoji: '🌲', x: 10, y: 40, size: 'text-6xl' },
+            { id: 'tree2', emoji: '🌲', x: 90, y: 40, size: 'text-6xl' },
+            { id: 'tree3', emoji: '🌳', x: 50, y: 30, size: 'text-5xl' },
+            { id: 'butterfly', emoji: '🦋', x: 40, y: 25, size: 'text-3xl' },
+            { id: 'ball', emoji: '⚽', x: 60, y: 80, size: 'text-3xl' },
+            { id: 'kite', emoji: '🪁', x: 75, y: 20, size: 'text-4xl' },
+            { id: 'flower', emoji: '🌻', x: 20, y: 75, size: 'text-4xl' },
+          ],
+          patricioSpot: { x: 12, y: 50 }, // Behind tree1
+          cloverSpot: { x: 65, y: 78 }, // Near ball
+        },
+      ];
+
+      const currentSceneData = scenes[currentScene];
+
+      // Start game
+      const startGame = () => {
+        setGameState('playing');
+        setScore(0);
+        setCurrentScene(0);
+        setCurrentPhase(1);
+        setTimeLeft(30);
+        setHintsLeft(3);
+        setShowHint(false);
+        setWrongTaps(0);
+        setFoundItems([]);
+        setFloatingTexts([]);
+        setShowFoundAnimation(false);
+      };
+
+      // Timer effect
+      useEffect(() => {
+        if (gameState !== 'playing' || isPaused) {
+          if (timerRef.current) clearInterval(timerRef.current);
+          return;
+        }
+
+        timerRef.current = setInterval(() => {
+          setTimeLeft(prev => {
+            if (prev <= 1) {
+              // Time's up - move to next scene or end
+              handleTimeUp();
+              return 0;
+            }
+            return prev - 1;
+          });
+        }, 1000);
+
+        return () => {
+          if (timerRef.current) clearInterval(timerRef.current);
+        };
+      }, [gameState, isPaused, currentScene, currentPhase]);
+
+      // Handle time running out
+      const handleTimeUp = () => {
+        if (timerRef.current) clearInterval(timerRef.current);
+
+        // Move to next phase/scene
+        if (currentPhase === 1) {
+          // Didn't find Patricio, move to phase 2
+          setCurrentPhase(2);
+          setTimeLeft(30);
+          setShowHint(false);
+        } else {
+          // Didn't find clover, move to next scene
+          moveToNextScene();
+        }
+      };
+
+      // Move to next scene
+      const moveToNextScene = () => {
+        const nextScene = currentScene + 1;
+        if (nextScene >= scenes.length) {
+          // Game over
+          setGameState('ended');
+        } else {
+          setCurrentScene(nextScene);
+          setCurrentPhase(1);
+          setTimeLeft(30);
+          setShowHint(false);
+          setFoundItems([]);
+        }
+      };
+
+      // Add floating text
+      const addFloatingText = (x, y, text, color) => {
+        const id = Date.now();
+        setFloatingTexts(prev => [...prev, { id, x, y, text, color }]);
+        setTimeout(() => {
+          setFloatingTexts(prev => prev.filter(t => t.id !== id));
+        }, 1000);
+      };
+
+      // Handle tap on game area
+      const handleTap = (e) => {
+        if (gameState !== 'playing' || isPaused) return;
+
+        const rect = e.currentTarget.getBoundingClientRect();
+        const x = ((e.clientX - rect.left) / rect.width) * 100;
+        const y = ((e.clientY - rect.top) / rect.height) * 100;
+
+        // Determine what we're looking for
+        const targetSpot = currentPhase === 1
+          ? currentSceneData.patricioSpot
+          : currentSceneData.cloverSpot;
+        const targetKey = currentPhase === 1
+          ? `patricio-${currentScene}`
+          : `clover-${currentScene}`;
+
+        // Check if already found
+        if (foundItems.includes(targetKey)) return;
+
+        // Check if tap is on target (within 12% radius)
+        const dx = Math.abs(x - targetSpot.x);
+        const dy = Math.abs(y - targetSpot.y);
+        const distance = Math.sqrt(dx * dx + dy * dy);
+
+        if (distance < 12) {
+          // Found it!
+          handleFound(targetKey, x, y);
+        } else {
+          // Wrong tap
+          handleWrongTap(x, y);
+        }
+      };
+
+      // Handle finding the target
+      const handleFound = (key, x, y) => {
+        if (timerRef.current) clearInterval(timerRef.current);
+        setFoundItems(prev => [...prev, key]);
+        setShowHint(false);
+
+        const isPatricio = currentPhase === 1;
+        const points = isPatricio ? 20 : 15;
+        const timeBonus = timeLeft;
+        const totalPoints = points + timeBonus;
+
+        setScore(prev => prev + totalPoints);
+        addFloatingText(x, y, `+${totalPoints}`, '#22c55e');
+
+        setFoundMessage(isPatricio ? '¡Encontraste a Patricio!' : '¡Encontraste el trébol!');
+        setShowFoundAnimation(true);
+
+        setTimeout(() => {
+          setShowFoundAnimation(false);
+          setFoundMessage('');
+
+          if (isPatricio) {
+            // Move to phase 2 (find clover)
+            setCurrentPhase(2);
+            setTimeLeft(30);
+          } else {
+            // Move to next scene
+            moveToNextScene();
+          }
+        }, 1500);
+      };
+
+      // Handle wrong tap
+      const handleWrongTap = (x, y) => {
+        setWrongTaps(prev => prev + 1);
+        setScore(prev => Math.max(0, prev - 2));
+        addFloatingText(x, y, '-2', '#ef4444');
+      };
+
+      // Use hint
+      const useHint = (e) => {
+        e.stopPropagation();
+        if (hintsLeft <= 0 || showHint) return;
+
+        setHintsLeft(prev => prev - 1);
+        setScore(prev => Math.max(0, prev - 5));
+        setShowHint(true);
+
+        // Hide hint after 2 seconds
+        if (hintTimerRef.current) clearTimeout(hintTimerRef.current);
+        hintTimerRef.current = setTimeout(() => {
+          setShowHint(false);
+        }, 2000);
+      };
+
+      // Cleanup
+      useEffect(() => {
+        return () => {
+          if (timerRef.current) clearInterval(timerRef.current);
+          if (hintTimerRef.current) clearTimeout(hintTimerRef.current);
+        };
+      }, []);
+
+      // Calculate stars
+      const getStars = () => {
+        if (score >= 100) return 3;
+        if (score >= 70) return 2;
+        if (score >= 40) return 1;
+        return 0;
+      };
+
+      // Patricio SVG (green lizard with shamrock hat)
+      const PatricioSprite = ({ glowing }) => (
+        <svg viewBox="0 0 50 60" className={`w-full h-full ${glowing ? 'animate-pulse' : ''}`}>
+          {glowing && <circle cx="25" cy="30" r="28" fill="#22c55e" opacity="0.4" />}
+          {/* Body */}
+          <ellipse cx="25" cy="38" rx="12" ry="15" fill="#22c55e" />
+          <ellipse cx="25" cy="40" rx="8" ry="10" fill="#86efac" />
+          {/* Head */}
+          <ellipse cx="25" cy="22" rx="10" ry="8" fill="#22c55e" />
+          {/* Shamrock hat */}
+          <ellipse cx="25" cy="12" rx="8" ry="3" fill="#166534" />
+          <rect x="22" y="8" width="6" height="5" fill="#166534" rx="1" />
+          <text x="25" y="8" textAnchor="middle" fontSize="8">☘️</text>
+          {/* Eyes */}
+          <circle cx="21" cy="20" r="3" fill="white" />
+          <circle cx="29" cy="20" r="3" fill="white" />
+          <circle cx="21.5" cy="20" r="1.5" fill="#222" />
+          <circle cx="29.5" cy="20" r="1.5" fill="#222" />
+          {/* Smile */}
+          <path d="M 20 26 Q 25 30 30 26" fill="none" stroke="#222" strokeWidth="1.5" strokeLinecap="round" />
+        </svg>
+      );
+
+      // Clover sprite
+      const CloverSprite = ({ glowing }) => (
+        <div className={`text-2xl ${glowing ? 'animate-pulse' : ''}`} style={{
+          filter: glowing ? 'drop-shadow(0 0 8px #22c55e)' : 'none'
+        }}>
+          ☘️
+        </div>
+      );
+
+      // Intro screen
+      if (gameState === 'intro') {
+        return (
+          <GameIntroScreen
+            game={games[10]}
+            instructions="¡Encuentra a Patricio escondido en el pueblo! Luego busca el trébol ☘️ para dárselo."
+            onStart={startGame}
+          />
+        );
+      }
+
+      // End screen
+      if (gameState === 'ended') {
+        const itemsFound = foundItems.length;
+        const message = itemsFound >= 5
+          ? '¡Excelente! ¡Encontraste casi todo!'
+          : itemsFound >= 3
+            ? '¡Bien hecho!'
+            : '¡Sigue practicando!';
+
+        return (
+          <GameEndScreen
+            score={score}
+            stars={getStars()}
+            message={message}
+            onRestart={startGame}
+            onExit={onGameEnd}
+          />
+        );
+      }
+
+      // Get current target position for hint
+      const targetSpot = currentPhase === 1
+        ? currentSceneData.patricioSpot
+        : currentSceneData.cloverSpot;
+      const targetKey = currentPhase === 1
+        ? `patricio-${currentScene}`
+        : `clover-${currentScene}`;
+      const alreadyFound = foundItems.includes(targetKey);
+
+      // Game UI
+      return (
+        <div className="h-full flex flex-col relative overflow-hidden select-none">
+          {/* Stats bar */}
+          <div className="flex justify-between items-center p-3 bg-black/40 text-white z-20">
+            <div className="flex items-center gap-2">
+              <span className={`text-lg font-bold ${timeLeft <= 10 ? 'text-red-400 animate-pulse' : ''}`}>
+                ⏱️ {timeLeft}s
+              </span>
+            </div>
+            <div className="text-center">
+              <span className="text-sm opacity-80">{currentSceneData.name}</span>
+              <span className="mx-2">•</span>
+              <span className="text-sm font-bold">
+                {currentPhase === 1 ? '🦎 Busca a Patricio' : '☘️ Busca el trébol'}
+              </span>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="text-lg font-bold">⭐ {score}</span>
+            </div>
+          </div>
+
+          {/* Hint button */}
+          <button
+            onClick={useHint}
+            disabled={hintsLeft <= 0 || showHint}
+            className={`absolute top-16 right-3 z-30 px-3 py-2 rounded-full font-bold text-sm shadow-lg transition-all ${
+              hintsLeft > 0 && !showHint
+                ? 'bg-yellow-400 text-yellow-900 hover:bg-yellow-300'
+                : 'bg-gray-400 text-gray-600 cursor-not-allowed'
+            }`}
+          >
+            💡 Pista ({hintsLeft})
+          </button>
+
+          {/* Scene progress */}
+          <div className="absolute top-16 left-3 z-20 flex gap-1">
+            {scenes.map((_, i) => (
+              <div
+                key={i}
+                className={`w-3 h-3 rounded-full ${
+                  i < currentScene ? 'bg-green-500' : i === currentScene ? 'bg-white' : 'bg-white/30'
+                }`}
+              />
+            ))}
+          </div>
+
+          {/* Game area */}
+          <div
+            className={`flex-1 relative bg-gradient-to-b ${currentSceneData.bgGradient}`}
+            onClick={handleTap}
+          >
+            {/* Sky decoration */}
+            <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-sky-300 to-transparent pointer-events-none" />
+            <div className="absolute top-4 left-8 text-3xl pointer-events-none">☁️</div>
+            <div className="absolute top-8 right-12 text-2xl pointer-events-none">☁️</div>
+            <div className="absolute top-2 right-1/3 text-xl pointer-events-none">☁️</div>
+
+            {/* Ground */}
+            <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-amber-700/30 to-transparent pointer-events-none" />
+
+            {/* Scene elements (decorations) */}
+            {currentSceneData.elements.map(el => (
+              <div
+                key={el.id}
+                className={`absolute ${el.size} pointer-events-none transition-transform`}
+                style={{
+                  left: `${el.x}%`,
+                  top: `${el.y}%`,
+                  transform: 'translate(-50%, -50%)',
+                }}
+              >
+                {el.emoji}
+              </div>
+            ))}
+
+            {/* Patricio (hidden or found) */}
+            {(currentPhase === 1 || foundItems.includes(`patricio-${currentScene}`)) && (
+              <div
+                className="absolute w-12 h-14 transition-all"
+                style={{
+                  left: `${currentSceneData.patricioSpot.x}%`,
+                  top: `${currentSceneData.patricioSpot.y}%`,
+                  transform: 'translate(-50%, -50%)',
+                  opacity: foundItems.includes(`patricio-${currentScene}`) ? 1 : 0.85,
+                  zIndex: foundItems.includes(`patricio-${currentScene}`) ? 15 : 5,
+                }}
+              >
+                <PatricioSprite glowing={showHint && currentPhase === 1 && !alreadyFound} />
+              </div>
+            )}
+
+            {/* Clover (only in phase 2) */}
+            {currentPhase === 2 && !foundItems.includes(`clover-${currentScene}`) && (
+              <div
+                className="absolute transition-all"
+                style={{
+                  left: `${currentSceneData.cloverSpot.x}%`,
+                  top: `${currentSceneData.cloverSpot.y}%`,
+                  transform: 'translate(-50%, -50%)',
+                  zIndex: 5,
+                }}
+              >
+                <CloverSprite glowing={showHint && !alreadyFound} />
+              </div>
+            )}
+
+            {/* Found clover display */}
+            {foundItems.includes(`clover-${currentScene}`) && (
+              <div
+                className="absolute text-3xl z-15"
+                style={{
+                  left: `${currentSceneData.cloverSpot.x}%`,
+                  top: `${currentSceneData.cloverSpot.y}%`,
+                  transform: 'translate(-50%, -50%)',
+                }}
+              >
+                ☘️
+              </div>
+            )}
+
+            {/* Floating texts */}
+            {floatingTexts.map(ft => (
+              <div
+                key={ft.id}
+                className="absolute pointer-events-none font-bold text-xl z-40"
+                style={{
+                  left: `${ft.x}%`,
+                  top: `${ft.y}%`,
+                  color: ft.color,
+                  animation: 'floatUp 1s ease-out forwards',
+                  transform: 'translate(-50%, -50%)',
+                }}
+              >
+                {ft.text}
+              </div>
+            ))}
+
+            {/* Found animation overlay */}
+            {showFoundAnimation && (
+              <div className="absolute inset-0 flex items-center justify-center z-50 pointer-events-none">
+                <div className="bg-green-500/90 px-8 py-4 rounded-2xl shadow-2xl animate-bounce">
+                  <p className="text-2xl font-bold text-white">{foundMessage}</p>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Instructions bar */}
+          <div className="h-14 bg-gradient-to-t from-green-700 to-green-600 flex items-center justify-center">
+            <p className="text-white font-bold text-lg">
+              👆 Toca donde crees que está {currentPhase === 1 ? 'Patricio' : 'el trébol'}
+            </p>
+          </div>
+
+          {/* CSS Animations */}
+          <style>{`
+            @keyframes floatUp {
+              0% { opacity: 1; transform: translate(-50%, -50%) translateY(0); }
+              100% { opacity: 0; transform: translate(-50%, -50%) translateY(-40px); }
+            }
+          `}</style>
+        </div>
+      );
+    };
+
+    // ==================== GAME 12: LA AVENTURA AL AEROPUERTO ====================
+    // Time pressure runner: Race to catch the airport bus before it leaves
+
+    const Game12Aeropuerto = ({ isPaused, onGameEnd }) => {
+      const [gameState, setGameState] = useState('intro'); // intro, playing, won, lost
+      const [timeLeft, setTimeLeft] = useState(45);
+      const [distance, setDistance] = useState(0);
+      const [score, setScore] = useState(0);
+      const [lane, setLane] = useState(1); // 0=left, 1=center, 2=right
+      const [isJumping, setIsJumping] = useState(false);
+      const [isSliding, setIsSliding] = useState(false);
+      const [obstacles, setObstacles] = useState([]);
+      const [powerups, setPowerups] = useState([]);
+      const [hasSpeedBoost, setHasSpeedBoost] = useState(false);
+      const [floatingTexts, setFloatingTexts] = useState([]);
+      const [busLeaving, setBusLeaving] = useState(false);
+      const [invulnerable, setInvulnerable] = useState(false);
+      const [streetOffset, setStreetOffset] = useState(0);
+
+      const gameRef = useRef(null);
+      const frameRef = useRef(null);
+      const lastTimeRef = useRef(0);
+      const obstacleIdRef = useRef(0);
+      const powerupIdRef = useRef(0);
+      const floatIdRef = useRef(0);
+      const timerRef = useRef(null);
+      const touchStartRef = useRef(null);
+
+      const LANE_POSITIONS = [20, 50, 80]; // percentage positions for 3 lanes
+      const PLAYER_Y = 70; // Player stays at 70% from top
+      const GOAL_DISTANCE = 200; // meters to reach bus
+      const BASE_SPEED = 0.8; // base movement speed
+
+      // Obstacle types per PRD
+      const OBSTACLE_TYPES = [
+        { type: 'puddle', emoji: '💧', width: 14, height: 8, action: 'jump', penalty: 2 },
+        { type: 'barrier', emoji: '🚧', width: 16, height: 12, action: 'jump', penalty: 3 },
+        { type: 'sign', emoji: '🪧', width: 10, height: 16, action: 'slide', penalty: 2 },
+        { type: 'cart', emoji: '🛒', width: 14, height: 14, action: 'dodge', penalty: 3 },
+      ];
+
+      // Powerup types
+      const POWERUP_TYPES = [
+        { type: 'clock', emoji: '⏰', effect: 'time', bonus: 5 },
+        { type: 'sneakers', emoji: '👟', effect: 'speed', duration: 3000 },
+      ];
+
+      // Add floating text
+      const addFloatingText = useCallback((text, x, y, color) => {
+        const id = floatIdRef.current++;
+        setFloatingTexts(prev => [...prev, { id, text, x, y, color }]);
+        setTimeout(() => {
+          setFloatingTexts(prev => prev.filter(f => f.id !== id));
+        }, 1000);
+      }, []);
+
+      // Start game
+      const startGame = () => {
+        setGameState('playing');
+        setTimeLeft(45);
+        setDistance(0);
+        setScore(0);
+        setLane(1);
+        setObstacles([]);
+        setPowerups([]);
+        setIsJumping(false);
+        setIsSliding(false);
+        setHasSpeedBoost(false);
+        setInvulnerable(false);
+        setBusLeaving(false);
+        setFloatingTexts([]);
+        lastTimeRef.current = 0;
+        obstacleIdRef.current = 0;
+        powerupIdRef.current = 0;
+      };
+
+      // Handle jump
+      const handleJump = useCallback(() => {
+        if (gameState !== 'playing' || isPaused || isJumping || isSliding) return;
+        setIsJumping(true);
+        setTimeout(() => setIsJumping(false), 400);
+      }, [gameState, isPaused, isJumping, isSliding]);
+
+      // Handle slide
+      const handleSlide = useCallback(() => {
+        if (gameState !== 'playing' || isPaused || isJumping || isSliding) return;
+        setIsSliding(true);
+        setTimeout(() => setIsSliding(false), 500);
+      }, [gameState, isPaused, isJumping, isSliding]);
+
+      // Handle dodge (lane change)
+      const handleDodge = useCallback((direction) => {
+        if (gameState !== 'playing' || isPaused) return;
+        setLane(prev => {
+          if (direction === 'left') return Math.max(0, prev - 1);
+          if (direction === 'right') return Math.min(2, prev + 1);
+          return prev;
+        });
+      }, [gameState, isPaused]);
+
+      // Touch/mouse controls
+      const handleTouchStart = useCallback((e) => {
+        if (gameState !== 'playing' || isPaused) return;
+        const touch = e.touches ? e.touches[0] : e;
+        touchStartRef.current = { x: touch.clientX, y: touch.clientY, time: Date.now() };
+      }, [gameState, isPaused]);
+
+      const handleTouchEnd = useCallback((e) => {
+        if (gameState !== 'playing' || isPaused || !touchStartRef.current) return;
+
+        const touch = e.changedTouches ? e.changedTouches[0] : e;
+        const deltaX = touch.clientX - touchStartRef.current.x;
+        const deltaY = touch.clientY - touchStartRef.current.y;
+        const deltaTime = Date.now() - touchStartRef.current.time;
+
+        const swipeThreshold = 40;
+        const tapThreshold = 15;
+
+        if (Math.abs(deltaX) > swipeThreshold && Math.abs(deltaX) > Math.abs(deltaY)) {
+          // Horizontal swipe - dodge
+          handleDodge(deltaX > 0 ? 'right' : 'left');
+        } else if (deltaY > swipeThreshold && Math.abs(deltaY) > Math.abs(deltaX)) {
+          // Swipe down - slide
+          handleSlide();
+        } else if (deltaY < -swipeThreshold && Math.abs(deltaY) > Math.abs(deltaX)) {
+          // Swipe up - jump
+          handleJump();
+        } else if (Math.abs(deltaX) < tapThreshold && Math.abs(deltaY) < tapThreshold && deltaTime < 300) {
+          // Tap - jump
+          handleJump();
+        }
+
+        touchStartRef.current = null;
+      }, [gameState, isPaused, handleJump, handleSlide, handleDodge]);
+
+      // Keyboard controls
+      useEffect(() => {
+        const handleKeyDown = (e) => {
+          if (gameState !== 'playing' || isPaused) return;
+
+          switch(e.key) {
+            case ' ':
+            case 'ArrowUp':
+              e.preventDefault();
+              handleJump();
+              break;
+            case 'ArrowDown':
+              e.preventDefault();
+              handleSlide();
+              break;
+            case 'ArrowLeft':
+              e.preventDefault();
+              handleDodge('left');
+              break;
+            case 'ArrowRight':
+              e.preventDefault();
+              handleDodge('right');
+              break;
+          }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+      }, [gameState, isPaused, handleJump, handleSlide, handleDodge]);
+
+      // Timer countdown
+      useEffect(() => {
+        if (gameState !== 'playing' || isPaused) {
+          if (timerRef.current) clearInterval(timerRef.current);
+          return;
+        }
+
+        timerRef.current = setInterval(() => {
+          setTimeLeft(prev => {
+            if (prev <= 1) {
+              // Time's up - lost
+              setGameState('lost');
+              return 0;
+            }
+            // Bus starts leaving at 10 seconds
+            if (prev <= 11) {
+              setBusLeaving(true);
+            }
+            return prev - 1;
+          });
+        }, 1000);
+
+        return () => {
+          if (timerRef.current) clearInterval(timerRef.current);
+        };
+      }, [gameState, isPaused]);
+
+      // Spawn obstacles and powerups
+      useEffect(() => {
+        if (gameState !== 'playing' || isPaused) return;
+
+        const spawnInterval = setInterval(() => {
+          // Spawn obstacle
+          if (Math.random() < 0.7) {
+            const typeIndex = Math.floor(Math.random() * OBSTACLE_TYPES.length);
+            const type = OBSTACLE_TYPES[typeIndex];
+            const spawnLane = Math.floor(Math.random() * 3);
+
+            const newObstacle = {
+              id: obstacleIdRef.current++,
+              ...type,
+              lane: spawnLane,
+              x: LANE_POSITIONS[spawnLane],
+              y: -15,
+              passed: false,
+            };
+            setObstacles(prev => [...prev, newObstacle]);
+          }
+
+          // Spawn powerup occasionally
+          if (Math.random() < 0.15) {
+            const typeIndex = Math.floor(Math.random() * POWERUP_TYPES.length);
+            const type = POWERUP_TYPES[typeIndex];
+            const spawnLane = Math.floor(Math.random() * 3);
+
+            const newPowerup = {
+              id: powerupIdRef.current++,
+              ...type,
+              lane: spawnLane,
+              x: LANE_POSITIONS[spawnLane],
+              y: -15,
+              collected: false,
+            };
+            setPowerups(prev => [...prev, newPowerup]);
+          }
+        }, hasSpeedBoost ? 600 : 900);
+
+        return () => clearInterval(spawnInterval);
+      }, [gameState, isPaused, hasSpeedBoost]);
+
+      // Game loop
+      useEffect(() => {
+        if (gameState !== 'playing' || isPaused) return;
+
+        const gameLoop = (timestamp) => {
+          if (!lastTimeRef.current) lastTimeRef.current = timestamp;
+          const delta = timestamp - lastTimeRef.current;
+          lastTimeRef.current = timestamp;
+
+          const currentSpeed = hasSpeedBoost ? BASE_SPEED * 1.5 : BASE_SPEED;
+
+          // Move obstacles down
+          setObstacles(prev => {
+            const updated = prev.map(obs => ({
+              ...obs,
+              y: obs.y + (currentSpeed * delta * 0.035),
+            }));
+
+            // Check collisions
+            const playerLane = lane;
+            const playerJumping = isJumping;
+            const playerSliding = isSliding;
+            const playerInvulnerable = invulnerable;
+
+            updated.forEach(obs => {
+              if (!obs.passed && obs.y > PLAYER_Y - 8 && obs.y < PLAYER_Y + 10) {
+                if (obs.lane === playerLane && !playerInvulnerable) {
+                  // Check if player avoided obstacle
+                  let collision = false;
+
+                  if (obs.action === 'jump' && !playerJumping) {
+                    collision = true;
+                  } else if (obs.action === 'slide' && !playerSliding) {
+                    collision = true;
+                  } else if (obs.action === 'dodge') {
+                    collision = true; // Must dodge, not in same lane
+                  }
+
+                  if (collision) {
+                    // Hit obstacle - time penalty
+                    setTimeLeft(t => Math.max(1, t - obs.penalty));
+                    addFloatingText(`-${obs.penalty}s`, LANE_POSITIONS[playerLane], PLAYER_Y - 10, '#ef4444');
+                    setInvulnerable(true);
+                    setTimeout(() => setInvulnerable(false), 800);
+                    obs.passed = true;
+                  }
+                }
+
+                // Successfully passed
+                if (!obs.passed && obs.y > PLAYER_Y + 5) {
+                  obs.passed = true;
+                  setScore(s => s + 2);
+                }
+              }
+            });
+
+            return updated.filter(obs => obs.y < 115);
+          });
+
+          // Move powerups down
+          setPowerups(prev => {
+            const updated = prev.map(pw => ({
+              ...pw,
+              y: pw.y + (currentSpeed * delta * 0.035),
+            }));
+
+            // Check collection
+            const playerLane = lane;
+
+            updated.forEach(pw => {
+              if (!pw.collected && pw.lane === playerLane &&
+                  pw.y > PLAYER_Y - 10 && pw.y < PLAYER_Y + 10) {
+                pw.collected = true;
+
+                if (pw.effect === 'time') {
+                  setTimeLeft(t => t + pw.bonus);
+                  addFloatingText(`+${pw.bonus}s`, LANE_POSITIONS[playerLane], PLAYER_Y - 15, '#22c55e');
+                } else if (pw.effect === 'speed') {
+                  setHasSpeedBoost(true);
+                  addFloatingText('¡RÁPIDO!', LANE_POSITIONS[playerLane], PLAYER_Y - 15, '#8b5cf6');
+                  setTimeout(() => setHasSpeedBoost(false), pw.duration);
+                }
+              }
+            });
+
+            return updated.filter(pw => !pw.collected && pw.y < 115);
+          });
+
+          // Update distance
+          setDistance(prev => {
+            const newDist = prev + (currentSpeed * delta * 0.01);
+            if (newDist >= GOAL_DISTANCE) {
+              // Reached the bus!
+              setGameState('won');
+              return GOAL_DISTANCE;
+            }
+            return newDist;
+          });
+
+          // Animate street
+          setStreetOffset(prev => (prev + currentSpeed * 2) % 40);
+
+          frameRef.current = requestAnimationFrame(gameLoop);
+        };
+
+        frameRef.current = requestAnimationFrame(gameLoop);
+
+        return () => {
+          if (frameRef.current) cancelAnimationFrame(frameRef.current);
+        };
+      }, [gameState, isPaused, lane, isJumping, isSliding, invulnerable, hasSpeedBoost, addFloatingText]);
+
+      // Cleanup
+      useEffect(() => {
+        return () => {
+          if (frameRef.current) cancelAnimationFrame(frameRef.current);
+          if (timerRef.current) clearInterval(timerRef.current);
+        };
+      }, []);
+
+      // Calculate stars
+      const getStars = () => {
+        if (gameState === 'won') {
+          const timeBonus = timeLeft * 2;
+          const total = 50 + timeBonus + score;
+          if (total >= 70) return 3;
+          if (total >= 50) return 2;
+          return 1;
+        }
+        // Lost
+        if (score >= 30) return 1;
+        return 0;
+      };
+
+      // Calculate final score
+      const getFinalScore = () => {
+        if (gameState === 'won') {
+          return 50 + (timeLeft * 2) + score;
+        }
+        return score;
+      };
+
+      // Coco running sprite
+      const CocoRunner = ({ jumping, sliding, invuln, speedBoost }) => (
+        <svg viewBox="0 0 60 80" className={`w-full h-full ${invuln ? 'animate-pulse opacity-70' : ''}`}>
+          {/* Speed lines when boosted */}
+          {speedBoost && (
+            <>
+              <line x1="5" y1="30" x2="-10" y2="30" stroke="#8b5cf6" strokeWidth="2" opacity="0.6" />
+              <line x1="5" y1="40" x2="-15" y2="40" stroke="#8b5cf6" strokeWidth="2" opacity="0.8" />
+              <line x1="5" y1="50" x2="-12" y2="50" stroke="#8b5cf6" strokeWidth="2" opacity="0.6" />
+            </>
+          )}
+          {/* Body */}
+          <ellipse cx="30" cy={sliding ? 55 : 45} rx={sliding ? 18 : 14} ry={sliding ? 10 : 18} fill="#6B8E23" />
+          <ellipse cx="30" cy={sliding ? 55 : 48} rx={sliding ? 14 : 10} ry={sliding ? 7 : 12} fill="#9ACD32" />
+          {/* Head */}
+          <ellipse cx={sliding ? 45 : 30} cy={sliding ? 50 : 25} rx={sliding ? 8 : 10} ry={sliding ? 6 : 8} fill="#6B8E23" />
+          {/* Eyes */}
+          <circle cx={sliding ? 48 : 27} cy={sliding ? 48 : 23} r="3" fill="white" />
+          <circle cx={sliding ? 52 : 33} cy={sliding ? 48 : 23} r="3" fill="white" />
+          <circle cx={sliding ? 49 : 28} cy={sliding ? 48 : 23} r="1.5" fill="#222" />
+          <circle cx={sliding ? 53 : 34} cy={sliding ? 48 : 23} r="1.5" fill="#222" />
+          {/* Smile */}
+          <path d={sliding ? "M 46 52 Q 50 55 54 52" : "M 25 28 Q 30 32 35 28"} fill="none" stroke="#222" strokeWidth="1.5" strokeLinecap="round" />
+          {/* Legs (running or sliding) */}
+          {!sliding && (
+            <>
+              <ellipse cx={jumping ? 22 : 20} cy={jumping ? 70 : 65} rx="5" ry={jumping ? 8 : 5} fill="#6B8E23" />
+              <ellipse cx={jumping ? 38 : 40} cy={jumping ? 70 : 65} rx="5" ry={jumping ? 8 : 5} fill="#6B8E23" />
+            </>
+          )}
+          {/* Suitcase */}
+          <rect x={sliding ? 10 : 42} y={sliding ? 45 : 35} width="12" height="10" rx="2" fill="#8B4513" />
+          <rect x={sliding ? 13 : 45} y={sliding ? 43 : 33} width="6" height="3" rx="1" fill="#A0522D" />
+        </svg>
+      );
+
+      // Intro screen
+      if (gameState === 'intro') {
+        return (
+          <GameIntroScreen
+            game={games[11]}
+            instructions="¡Corre al aeropuerto! Salta, deslízate y esquiva los obstáculos. ¡No pierdas el autobús!"
+            onStart={startGame}
+          />
+        );
+      }
+
+      // End screen
+      if (gameState === 'won' || gameState === 'lost') {
+        const message = gameState === 'won'
+          ? '¡Llegaste al autobús!'
+          : busLeaving
+            ? '¡El autobús se fue sin ti!'
+            : '¡Se acabó el tiempo!';
+
+        return (
+          <GameEndScreen
+            score={getFinalScore()}
+            stars={getStars()}
+            message={message}
+            onRestart={startGame}
+            onExit={onGameEnd}
+          />
+        );
+      }
+
+      // Playing
+      const progressPercent = (distance / GOAL_DISTANCE) * 100;
+      const isLowTime = timeLeft <= 10;
+
+      return (
+        <div
+          ref={gameRef}
+          className={`h-full flex flex-col relative overflow-hidden select-none ${isLowTime ? 'animate-pulse' : ''}`}
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
+          onMouseDown={handleTouchStart}
+          onMouseUp={handleTouchEnd}
+          style={{
+            background: 'linear-gradient(to bottom, #87CEEB 0%, #B0E0E6 30%, #E0E0E0 60%, #808080 100%)',
+          }}
+        >
+          {/* Red pulse overlay when time is low */}
+          {isLowTime && (
+            <div
+              className="absolute inset-0 pointer-events-none z-40"
+              style={{
+                boxShadow: 'inset 0 0 80px rgba(255, 0, 0, 0.4)',
+                animation: 'pulse 0.5s infinite',
+              }}
+            />
+          )}
+
+          {/* City skyline background */}
+          <div className="absolute top-8 left-0 right-0 h-24 flex items-end justify-around pointer-events-none opacity-60">
+            <div className="w-8 h-16 bg-gray-600 rounded-t" />
+            <div className="w-12 h-24 bg-gray-500 rounded-t" />
+            <div className="w-6 h-12 bg-gray-700 rounded-t" />
+            <div className="w-10 h-20 bg-gray-600 rounded-t" />
+            <div className="w-8 h-14 bg-gray-500 rounded-t" />
+            <div className="w-14 h-22 bg-gray-600 rounded-t" />
+            <div className="w-6 h-10 bg-gray-700 rounded-t" />
+          </div>
+
+          {/* Airport sign */}
+          <div className="absolute top-16 right-4 bg-blue-600 text-white px-3 py-1 rounded text-sm font-bold shadow-lg z-10">
+            ✈️ Aeropuerto →
+          </div>
+
+          {/* Bus at destination (visible near end) */}
+          {distance > 150 && (
+            <div
+              className={`absolute right-4 text-6xl transition-all duration-1000 ${busLeaving ? 'translate-x-20 opacity-50' : ''}`}
+              style={{ top: '15%' }}
+            >
+              🚌
+              {!busLeaving && <span className="absolute -top-2 left-1/2 text-sm">¡Espérame!</span>}
+            </div>
+          )}
+
+          {/* Stats bar */}
+          <div className="flex justify-between items-center p-3 bg-black/40 text-white z-20">
+            <div className={`text-xl font-bold ${isLowTime ? 'text-red-400 animate-pulse' : ''}`}>
+              ⏱️ {timeLeft}s
+            </div>
+            <div className="flex-1 mx-4">
+              <div className="h-3 bg-gray-700 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-green-400 to-green-600 transition-all"
+                  style={{ width: `${progressPercent}%` }}
+                />
+              </div>
+              <div className="flex justify-between text-xs mt-1">
+                <span>🏃 {Math.floor(distance)}m</span>
+                <span>🚌 {GOAL_DISTANCE}m</span>
+              </div>
+            </div>
+            <div className="text-lg font-bold">
+              ⭐ {score}
+              {hasSpeedBoost && <span className="ml-1 text-purple-400">⚡</span>}
+            </div>
+          </div>
+
+          {/* Game area */}
+          <div className="flex-1 relative">
+            {/* Street with lane markers */}
+            <div className="absolute inset-0 bg-gray-500">
+              {/* Lane dividers */}
+              <div className="absolute left-[35%] top-0 bottom-0 w-1 bg-yellow-400/60" style={{
+                backgroundImage: 'repeating-linear-gradient(to bottom, #facc15 0px, #facc15 20px, transparent 20px, transparent 40px)',
+                backgroundPosition: `0 ${streetOffset}px`,
+              }} />
+              <div className="absolute left-[65%] top-0 bottom-0 w-1 bg-yellow-400/60" style={{
+                backgroundImage: 'repeating-linear-gradient(to bottom, #facc15 0px, #facc15 20px, transparent 20px, transparent 40px)',
+                backgroundPosition: `0 ${streetOffset}px`,
+              }} />
+            </div>
+
+            {/* Obstacles */}
+            {obstacles.map(obs => (
+              <div
+                key={obs.id}
+                className="absolute text-4xl transition-transform"
+                style={{
+                  left: `${obs.x}%`,
+                  top: `${obs.y}%`,
+                  transform: 'translate(-50%, -50%)',
+                }}
+              >
+                {obs.emoji}
+              </div>
+            ))}
+
+            {/* Powerups */}
+            {powerups.map(pw => (
+              <div
+                key={pw.id}
+                className="absolute text-3xl animate-bounce"
+                style={{
+                  left: `${pw.x}%`,
+                  top: `${pw.y}%`,
+                  transform: 'translate(-50%, -50%)',
+                }}
+              >
+                {pw.emoji}
+              </div>
+            ))}
+
+            {/* Player (Coco) */}
+            <div
+              className="absolute w-16 h-20 transition-all duration-100"
+              style={{
+                left: `${LANE_POSITIONS[lane]}%`,
+                top: isJumping ? `${PLAYER_Y - 12}%` : `${PLAYER_Y}%`,
+                transform: 'translate(-50%, -50%)',
+              }}
+            >
+              <CocoRunner
+                jumping={isJumping}
+                sliding={isSliding}
+                invuln={invulnerable}
+                speedBoost={hasSpeedBoost}
+              />
+            </div>
+
+            {/* Floating texts */}
+            {floatingTexts.map(ft => (
+              <div
+                key={ft.id}
+                className="absolute pointer-events-none z-30 font-bold text-xl"
+                style={{
+                  left: `${ft.x}%`,
+                  top: `${ft.y}%`,
+                  color: ft.color,
+                  transform: 'translate(-50%, -50%)',
+                  animation: 'floatUp 1s ease-out forwards',
+                  textShadow: '2px 2px 4px rgba(0,0,0,0.5)',
+                }}
+              >
+                {ft.text}
+              </div>
+            ))}
+          </div>
+
+          {/* Control hints */}
+          <div className="h-16 bg-gradient-to-t from-indigo-700 to-indigo-600 flex items-center justify-around text-white text-sm font-bold px-4">
+            <span>👆 Salta</span>
+            <span>👇 Desliza</span>
+            <span>👈👉 Esquiva</span>
+          </div>
+
+          {/* CSS Animations */}
+          <style>{`
+            @keyframes floatUp {
+              0% { opacity: 1; transform: translate(-50%, -50%) translateY(0); }
+              100% { opacity: 0; transform: translate(-50%, -50%) translateY(-40px); }
+            }
+          `}</style>
+        </div>
+      );
+    };
+
+    // ==================== GAME 13: EL BOLETO NÚMERO 13 ====================
+    // Chase/catch: Tap the lottery ticket as it blows around unpredictably
+
+    const Game13Boleto = ({ isPaused, onGameEnd }) => {
+      const [gameState, setGameState] = useState('intro'); // intro, playing, ended
+      const [round, setRound] = useState(1);
+      const [roundTime, setRoundTime] = useState(15);
+      const [score, setScore] = useState(0);
+      const [catches, setCatches] = useState(0);
+      const [ticketPos, setTicketPos] = useState({ x: 50, y: 50 });
+      const [ticketVel, setTicketVel] = useState({ x: 0, y: 0 });
+      const [ticketRotation, setTicketRotation] = useState(0);
+      const [windDir, setWindDir] = useState({ x: 0, y: 0 });
+      const [windStrength, setWindStrength] = useState(0);
+      const [leaves, setLeaves] = useState([]);
+      const [floatingTexts, setFloatingTexts] = useState([]);
+      const [cocoReaction, setCocoReaction] = useState('watching'); // watching, excited, sad
+      const [ticketGlowing, setTicketGlowing] = useState(false);
+
+      const gameRef = useRef(null);
+      const frameRef = useRef(null);
+      const timerRef = useRef(null);
+      const windTimerRef = useRef(null);
+      const floatIdRef = useRef(0);
+      const leafIdRef = useRef(0);
+      const lastTimeRef = useRef(0);
+
+      const TOTAL_ROUNDS = 5;
+      const TIME_PER_ROUND = 15;
+      const TICKET_SIZE = 60; // pixels for hit detection
+
+      // Speed increases with rounds
+      const getTicketSpeed = useCallback(() => {
+        const baseSpeed = 1.5;
+        return baseSpeed + (round - 1) * 0.4;
+      }, [round]);
+
+      // Add floating text
+      const addFloatingText = useCallback((text, x, y, color) => {
+        const id = floatIdRef.current++;
+        setFloatingTexts(prev => [...prev, { id, text, x, y, color }]);
+        setTimeout(() => {
+          setFloatingTexts(prev => prev.filter(f => f.id !== id));
+        }, 1200);
+      }, []);
+
+      // Spawn a leaf
+      const spawnLeaf = useCallback(() => {
+        const id = leafIdRef.current++;
+        const startX = Math.random() * 100;
+        const leaf = {
+          id,
+          x: startX,
+          y: -5,
+          rotation: Math.random() * 360,
+          rotationSpeed: (Math.random() - 0.5) * 8,
+          emoji: ['🍃', '🍂', '🌿'][Math.floor(Math.random() * 3)],
+          size: 0.8 + Math.random() * 0.6,
+        };
+        setLeaves(prev => [...prev, leaf]);
+      }, []);
+
+      // Start a new round
+      const startRound = useCallback(() => {
+        setRoundTime(TIME_PER_ROUND);
+        // Random starting position for ticket
+        setTicketPos({
+          x: 30 + Math.random() * 40,
+          y: 30 + Math.random() * 30,
+        });
+        setTicketVel({
+          x: (Math.random() - 0.5) * 2,
+          y: (Math.random() - 0.5) * 2,
+        });
+        setTicketRotation(Math.random() * 30 - 15);
+        setCocoReaction('watching');
+        setTicketGlowing(false);
+      }, []);
+
+      // Start game
+      const startGame = () => {
+        setGameState('playing');
+        setRound(1);
+        setScore(0);
+        setCatches(0);
+        setLeaves([]);
+        setFloatingTexts([]);
+        setWindStrength(0);
+        setWindDir({ x: 0, y: 0 });
+        lastTimeRef.current = 0;
+        startRound();
+      };
+
+      // Handle catching the ticket
+      const handleCatch = useCallback((e) => {
+        if (gameState !== 'playing' || isPaused) return;
+
+        const rect = gameRef.current?.getBoundingClientRect();
+        if (!rect) return;
+
+        // Get tap position
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+        const tapX = ((clientX - rect.left) / rect.width) * 100;
+        const tapY = ((clientY - rect.top) / rect.height) * 100;
+
+        // Calculate ticket bounds (as percentage of screen)
+        const ticketWidthPct = (TICKET_SIZE / rect.width) * 100;
+        const ticketHeightPct = (TICKET_SIZE / rect.height) * 100;
+
+        const hitLeft = ticketPos.x - ticketWidthPct / 2;
+        const hitRight = ticketPos.x + ticketWidthPct / 2;
+        const hitTop = ticketPos.y - ticketHeightPct / 2;
+        const hitBottom = ticketPos.y + ticketHeightPct / 2;
+
+        const isHit = tapX >= hitLeft && tapX <= hitRight && tapY >= hitTop && tapY <= hitBottom;
+
+        if (isHit) {
+          // Caught the ticket!
+          const timeBonus = Math.max(0, 20 - (TIME_PER_ROUND - roundTime));
+          const roundBonus = 10;
+          const perfectBonus = roundTime > 10 ? 5 : 0;
+          const totalPoints = timeBonus + roundBonus + perfectBonus;
+
+          setScore(prev => prev + totalPoints);
+          setCatches(prev => prev + 1);
+          addFloatingText(`+${totalPoints}`, ticketPos.x, ticketPos.y - 10, '#22c55e');
+          setCocoReaction('excited');
+          setTicketGlowing(true);
+
+          // Next round or end game
+          setTimeout(() => {
+            if (round >= TOTAL_ROUNDS) {
+              setGameState('ended');
+            } else {
+              setRound(prev => prev + 1);
+              startRound();
+            }
+          }, 800);
+        } else {
+          // Near miss detection - check if within 1.5x the ticket size
+          const nearMissMargin = 1.5;
+          const nearLeft = ticketPos.x - (ticketWidthPct * nearMissMargin) / 2;
+          const nearRight = ticketPos.x + (ticketWidthPct * nearMissMargin) / 2;
+          const nearTop = ticketPos.y - (ticketHeightPct * nearMissMargin) / 2;
+          const nearBottom = ticketPos.y + (ticketHeightPct * nearMissMargin) / 2;
+
+          const isNearMiss = tapX >= nearLeft && tapX <= nearRight && tapY >= nearTop && tapY <= nearBottom;
+
+          if (isNearMiss) {
+            // Near miss - ticket zooms away
+            addFloatingText('¡Casi!', tapX, tapY, '#f59e0b');
+            setCocoReaction('sad');
+
+            // Calculate direction away from tap
+            const awayX = ticketPos.x - tapX;
+            const awayY = ticketPos.y - tapY;
+            const magnitude = Math.sqrt(awayX * awayX + awayY * awayY) || 1;
+
+            setTicketVel({
+              x: (awayX / magnitude) * getTicketSpeed() * 4,
+              y: (awayY / magnitude) * getTicketSpeed() * 4,
+            });
+          }
+        }
+      }, [gameState, isPaused, ticketPos, roundTime, round, addFloatingText, startRound, getTicketSpeed]);
+
+      // Timer countdown
+      useEffect(() => {
+        if (gameState !== 'playing' || isPaused) {
+          if (timerRef.current) clearInterval(timerRef.current);
+          return;
+        }
+
+        timerRef.current = setInterval(() => {
+          setRoundTime(prev => {
+            if (prev <= 1) {
+              // Time's up for this round
+              addFloatingText('¡Tiempo!', 50, 50, '#ef4444');
+              setCocoReaction('sad');
+
+              setTimeout(() => {
+                if (round >= TOTAL_ROUNDS) {
+                  setGameState('ended');
+                } else {
+                  setRound(r => r + 1);
+                  startRound();
+                }
+              }, 800);
+
+              return 0;
+            }
+            return prev - 1;
+          });
+        }, 1000);
+
+        return () => {
+          if (timerRef.current) clearInterval(timerRef.current);
+        };
+      }, [gameState, isPaused, round, addFloatingText, startRound]);
+
+      // Wind gusts
+      useEffect(() => {
+        if (gameState !== 'playing' || isPaused) {
+          if (windTimerRef.current) clearInterval(windTimerRef.current);
+          return;
+        }
+
+        const triggerWind = () => {
+          const newDir = {
+            x: (Math.random() - 0.5) * 2,
+            y: (Math.random() - 0.5) * 2,
+          };
+          const magnitude = Math.sqrt(newDir.x * newDir.x + newDir.y * newDir.y);
+          setWindDir({
+            x: newDir.x / magnitude,
+            y: newDir.y / magnitude,
+          });
+          setWindStrength(0.5 + Math.random() * 1.5 + round * 0.2);
+
+          // Spawn leaves with wind
+          for (let i = 0; i < 3 + round; i++) {
+            setTimeout(() => spawnLeaf(), i * 200);
+          }
+
+          // Wind fades after 1-2 seconds
+          setTimeout(() => {
+            setWindStrength(0);
+          }, 1000 + Math.random() * 1000);
+        };
+
+        // Initial gust
+        setTimeout(triggerWind, 1000);
+
+        // Periodic gusts
+        windTimerRef.current = setInterval(triggerWind, 2500 + Math.random() * 1500);
+
+        return () => {
+          if (windTimerRef.current) clearInterval(windTimerRef.current);
+        };
+      }, [gameState, isPaused, round, spawnLeaf]);
+
+      // Game loop - ticket movement
+      useEffect(() => {
+        if (gameState !== 'playing' || isPaused || ticketGlowing) return;
+
+        const gameLoop = (timestamp) => {
+          if (!lastTimeRef.current) lastTimeRef.current = timestamp;
+          const delta = Math.min(timestamp - lastTimeRef.current, 50); // Cap delta to prevent huge jumps
+          lastTimeRef.current = timestamp;
+
+          const speed = getTicketSpeed();
+          const deltaFactor = delta * 0.06;
+
+          // Update ticket velocity with wind and random flutter
+          setTicketVel(prev => {
+            let newVx = prev.x;
+            let newVy = prev.y;
+
+            // Apply wind
+            if (windStrength > 0) {
+              newVx += windDir.x * windStrength * deltaFactor * 0.3;
+              newVy += windDir.y * windStrength * deltaFactor * 0.3;
+            }
+
+            // Random flutter
+            newVx += (Math.random() - 0.5) * deltaFactor * 0.5;
+            newVy += (Math.random() - 0.5) * deltaFactor * 0.5;
+
+            // Apply friction
+            newVx *= 0.98;
+            newVy *= 0.98;
+
+            // Add base drift
+            if (Math.abs(newVx) < 0.3) newVx += (Math.random() - 0.5) * speed * 0.5;
+            if (Math.abs(newVy) < 0.3) newVy += (Math.random() - 0.5) * speed * 0.5;
+
+            // Clamp velocity
+            const maxVel = speed * 3;
+            newVx = Math.max(-maxVel, Math.min(maxVel, newVx));
+            newVy = Math.max(-maxVel, Math.min(maxVel, newVy));
+
+            return { x: newVx, y: newVy };
+          });
+
+          // Update ticket position
+          setTicketPos(prev => {
+            let newX = prev.x + ticketVel.x * deltaFactor;
+            let newY = prev.y + ticketVel.y * deltaFactor;
+
+            // Bounce off edges
+            if (newX < 10 || newX > 90) {
+              setTicketVel(v => ({ ...v, x: -v.x * 0.8 }));
+              newX = Math.max(10, Math.min(90, newX));
+            }
+            if (newY < 10 || newY > 75) { // Leave room for Coco/Mango at bottom
+              setTicketVel(v => ({ ...v, y: -v.y * 0.8 }));
+              newY = Math.max(10, Math.min(75, newY));
+            }
+
+            return { x: newX, y: newY };
+          });
+
+          // Update ticket rotation based on velocity
+          setTicketRotation(prev => {
+            const targetRotation = ticketVel.x * 10;
+            return prev + (targetRotation - prev) * 0.1;
+          });
+
+          // Update leaves
+          setLeaves(prev => {
+            return prev
+              .map(leaf => ({
+                ...leaf,
+                x: leaf.x + windDir.x * windStrength * deltaFactor * 0.5 + (Math.random() - 0.5) * 0.3,
+                y: leaf.y + 0.5 + windDir.y * windStrength * deltaFactor * 0.2,
+                rotation: leaf.rotation + leaf.rotationSpeed,
+              }))
+              .filter(leaf => leaf.y < 110);
+          });
+
+          frameRef.current = requestAnimationFrame(gameLoop);
+        };
+
+        frameRef.current = requestAnimationFrame(gameLoop);
+
+        return () => {
+          if (frameRef.current) cancelAnimationFrame(frameRef.current);
+        };
+      }, [gameState, isPaused, ticketGlowing, ticketVel, windDir, windStrength, getTicketSpeed]);
+
+      // Cleanup
+      useEffect(() => {
+        return () => {
+          if (frameRef.current) cancelAnimationFrame(frameRef.current);
+          if (timerRef.current) clearInterval(timerRef.current);
+          if (windTimerRef.current) clearInterval(windTimerRef.current);
+        };
+      }, []);
+
+      // Calculate stars
+      const getStars = () => {
+        if (score >= 90) return 3;
+        if (score >= 60) return 2;
+        if (score >= 30) return 1;
+        return 0;
+      };
+
+      // Golden ticket SVG
+      const GoldenTicket = ({ glowing }) => (
+        <svg viewBox="0 0 80 50" className={`w-full h-full ${glowing ? 'animate-pulse' : ''}`}>
+          {/* Glow effect */}
+          {glowing && (
+            <defs>
+              <filter id="glow">
+                <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+                <feMerge>
+                  <feMergeNode in="coloredBlur"/>
+                  <feMergeNode in="SourceGraphic"/>
+                </feMerge>
+              </filter>
+            </defs>
+          )}
+          {/* Ticket body */}
+          <rect
+            x="2" y="2" width="76" height="46" rx="4"
+            fill={glowing ? '#FFD700' : '#F4D03F'}
+            stroke="#B8860B"
+            strokeWidth="2"
+            filter={glowing ? 'url(#glow)' : undefined}
+          />
+          {/* Decorative border */}
+          <rect x="6" y="6" width="68" height="38" rx="2" fill="none" stroke="#B8860B" strokeWidth="1" strokeDasharray="4 2" />
+          {/* Number 13 */}
+          <text x="40" y="32" textAnchor="middle" fontSize="24" fontWeight="bold" fill="#8B4513" fontFamily="serif">
+            13
+          </text>
+          {/* Boleto text */}
+          <text x="40" y="14" textAnchor="middle" fontSize="8" fill="#8B4513" fontFamily="serif">
+            ★ BOLETO ★
+          </text>
+          {/* Stars */}
+          <text x="12" y="44" fontSize="8" fill="#B8860B">★</text>
+          <text x="68" y="44" fontSize="8" fill="#B8860B">★</text>
+        </svg>
+      );
+
+      // Coco and Mango watching
+      const CocoMangoWatching = ({ reaction }) => (
+        <div className="flex justify-center gap-8">
+          {/* Coco */}
+          <svg viewBox="0 0 50 60" className="w-12 h-14">
+            {/* Body */}
+            <ellipse cx="25" cy="45" rx="12" ry="14" fill="#6B8E23" />
+            <ellipse cx="25" cy="48" rx="9" ry="10" fill="#9ACD32" />
+            {/* Head */}
+            <ellipse cx="25" cy="22" rx="12" ry="10" fill="#6B8E23" />
+            {/* Eyes */}
+            <circle cx="20" cy="20" r="4" fill="white" />
+            <circle cx="30" cy="20" r="4" fill="white" />
+            <circle
+              cx={reaction === 'excited' ? 21 : reaction === 'sad' ? 19 : 20}
+              cy={reaction === 'excited' ? 18 : 20}
+              r="2"
+              fill="#222"
+            />
+            <circle
+              cx={reaction === 'excited' ? 31 : reaction === 'sad' ? 29 : 30}
+              cy={reaction === 'excited' ? 18 : 20}
+              r="2"
+              fill="#222"
+            />
+            {/* Mouth */}
+            {reaction === 'excited' && (
+              <ellipse cx="25" cy="28" rx="4" ry="3" fill="#222" />
+            )}
+            {reaction === 'sad' && (
+              <path d="M 20 30 Q 25 26 30 30" fill="none" stroke="#222" strokeWidth="2" />
+            )}
+            {reaction === 'watching' && (
+              <path d="M 20 28 Q 25 31 30 28" fill="none" stroke="#222" strokeWidth="2" />
+            )}
+          </svg>
+
+          {/* Mango */}
+          <svg viewBox="0 0 50 60" className="w-12 h-14">
+            {/* Body */}
+            <ellipse cx="25" cy="45" rx="12" ry="14" fill="#E67E22" />
+            <ellipse cx="25" cy="48" rx="9" ry="10" fill="#F5B041" />
+            {/* Head */}
+            <ellipse cx="25" cy="22" rx="12" ry="10" fill="#E67E22" />
+            {/* Eyes */}
+            <circle cx="20" cy="20" r="4" fill="white" />
+            <circle cx="30" cy="20" r="4" fill="white" />
+            <circle
+              cx={reaction === 'excited' ? 21 : reaction === 'sad' ? 19 : 20}
+              cy={reaction === 'excited' ? 18 : 20}
+              r="2"
+              fill="#222"
+            />
+            <circle
+              cx={reaction === 'excited' ? 31 : reaction === 'sad' ? 29 : 30}
+              cy={reaction === 'excited' ? 18 : 20}
+              r="2"
+              fill="#222"
+            />
+            {/* Crest */}
+            <ellipse cx="25" cy="10" rx="4" ry="3" fill="#F5B041" />
+            {/* Mouth */}
+            {reaction === 'excited' && (
+              <ellipse cx="25" cy="28" rx="4" ry="3" fill="#222" />
+            )}
+            {reaction === 'sad' && (
+              <path d="M 20 30 Q 25 26 30 30" fill="none" stroke="#222" strokeWidth="2" />
+            )}
+            {reaction === 'watching' && (
+              <path d="M 20 28 Q 25 31 30 28" fill="none" stroke="#222" strokeWidth="2" />
+            )}
+          </svg>
+        </div>
+      );
+
+      // Intro screen
+      if (gameState === 'intro') {
+        return (
+          <GameIntroScreen
+            game={games[12]}
+            instructions="¡Atrapa el boleto número 13! Toca el boleto antes de que se vuele. ¡Cuidado con el viento!"
+            onStart={startGame}
+          />
+        );
+      }
+
+      // End screen
+      if (gameState === 'ended') {
+        const message = catches === TOTAL_ROUNDS
+          ? '¡Atrapaste todos los boletos!'
+          : catches > 0
+            ? `¡Atrapaste ${catches} de ${TOTAL_ROUNDS} boletos!`
+            : '¡El boleto se escapó!';
+
+        return (
+          <GameEndScreen
+            score={score}
+            stars={getStars()}
+            message={message}
+            onRestart={startGame}
+            onExit={onGameEnd}
+          />
+        );
+      }
+
+      // Playing
+      const isLowTime = roundTime <= 5;
+
+      return (
+        <div
+          ref={gameRef}
+          className="h-full flex flex-col relative overflow-hidden select-none touch-none"
+          onTouchStart={handleCatch}
+          onMouseDown={handleCatch}
+          style={{
+            background: 'linear-gradient(to bottom, #87CEEB 0%, #B0E0E6 40%, #90EE90 70%, #228B22 100%)',
+          }}
+        >
+          {/* Wind indicator */}
+          {windStrength > 0 && (
+            <div
+              className="absolute top-20 left-4 text-2xl opacity-60 transition-transform"
+              style={{
+                transform: `rotate(${Math.atan2(windDir.y, windDir.x) * 180 / Math.PI}deg) scale(${0.8 + windStrength * 0.3})`,
+              }}
+            >
+              💨
+            </div>
+          )}
+
+          {/* Leaves/debris */}
+          {leaves.map(leaf => (
+            <div
+              key={leaf.id}
+              className="absolute pointer-events-none"
+              style={{
+                left: `${leaf.x}%`,
+                top: `${leaf.y}%`,
+                transform: `rotate(${leaf.rotation}deg) scale(${leaf.size})`,
+                fontSize: '1.5rem',
+                opacity: 0.7,
+              }}
+            >
+              {leaf.emoji}
+            </div>
+          ))}
+
+          {/* Stats bar */}
+          <div className="flex justify-between items-center p-3 bg-black/40 text-white z-20">
+            <div className={`text-xl font-bold ${isLowTime ? 'text-red-400 animate-pulse' : ''}`}>
+              ⏱️ {roundTime}s
+            </div>
+            <div className="text-lg font-bold bg-yellow-500/80 px-3 py-1 rounded-full">
+              Ronda {round}/{TOTAL_ROUNDS}
+            </div>
+            <div className="text-lg font-bold">
+              ⭐ {score}
+            </div>
+          </div>
+
+          {/* Game area */}
+          <div className="flex-1 relative">
+            {/* The golden ticket */}
+            <div
+              className="absolute w-16 h-10 cursor-pointer transition-transform"
+              style={{
+                left: `${ticketPos.x}%`,
+                top: `${ticketPos.y}%`,
+                transform: `translate(-50%, -50%) rotate(${ticketRotation}deg)`,
+                filter: ticketGlowing ? 'drop-shadow(0 0 15px gold)' : 'drop-shadow(2px 4px 6px rgba(0,0,0,0.3))',
+              }}
+            >
+              <GoldenTicket glowing={ticketGlowing} />
+            </div>
+
+            {/* Floating texts */}
+            {floatingTexts.map(ft => (
+              <div
+                key={ft.id}
+                className="absolute pointer-events-none z-30 font-bold text-2xl"
+                style={{
+                  left: `${ft.x}%`,
+                  top: `${ft.y}%`,
+                  color: ft.color,
+                  transform: 'translate(-50%, -50%)',
+                  animation: 'floatUp 1.2s ease-out forwards',
+                  textShadow: '2px 2px 4px rgba(0,0,0,0.5)',
+                }}
+              >
+                {ft.text}
+              </div>
+            ))}
+          </div>
+
+          {/* Coco and Mango at bottom */}
+          <div className="h-20 bg-gradient-to-t from-green-700 to-green-600 flex items-center justify-center">
+            <CocoMangoWatching reaction={cocoReaction} />
+          </div>
+
+          {/* Catches indicator */}
+          <div className="absolute bottom-24 left-1/2 -translate-x-1/2 flex gap-2">
+            {Array.from({ length: TOTAL_ROUNDS }).map((_, i) => (
+              <div
+                key={i}
+                className={`w-3 h-3 rounded-full ${
+                  i < catches ? 'bg-yellow-400' : i === round - 1 ? 'bg-white animate-pulse' : 'bg-white/30'
+                }`}
+              />
+            ))}
+          </div>
+
+          {/* CSS Animations */}
+          <style>{`
+            @keyframes floatUp {
+              0% { opacity: 1; transform: translate(-50%, -50%) translateY(0) scale(1); }
+              100% { opacity: 0; transform: translate(-50%, -50%) translateY(-60px) scale(1.3); }
+            }
+          `}</style>
+        </div>
+      );
+    };
+
     // ==================== PLACEHOLDER FOR OTHER GAMES ====================
 
     const ComingSoonGame = ({ game, onClose }) => (
@@ -5467,7 +7195,7 @@
     // ==================== GAME CARD ====================
 
     // Track which games are implemented
-    const availableGames = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]; // Games 1-10 are available
+    const availableGames = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]; // All 13 games are available
 
     const GameCard = ({ game, progress, onPlay }) => {
       const imgNum = String(game.id).padStart(2, '0');
@@ -5629,6 +7357,30 @@
           return (
             <GameWrapper game={game} onClose={() => setCurrentGame(null)}>
               <Game10Barquitos onGameEnd={() => handleGameEnd(10)} />
+            </GameWrapper>
+          );
+        }
+
+        if (currentGame === 11) {
+          return (
+            <GameWrapper game={game} onClose={() => setCurrentGame(null)}>
+              <Game11SanPatricio onGameEnd={() => handleGameEnd(11)} />
+            </GameWrapper>
+          );
+        }
+
+        if (currentGame === 12) {
+          return (
+            <GameWrapper game={game} onClose={() => setCurrentGame(null)}>
+              <Game12Aeropuerto onGameEnd={() => handleGameEnd(12)} />
+            </GameWrapper>
+          );
+        }
+
+        if (currentGame === 13) {
+          return (
+            <GameWrapper game={game} onClose={() => setCurrentGame(null)}>
+              <Game13Boleto onGameEnd={() => handleGameEnd(13)} />
             </GameWrapper>
           );
         }

@@ -1,0 +1,46 @@
+{
+  "prd_version": "1.0",
+  "game": {
+    "id": 12,
+    "title": "La aventura al aeropuerto",
+    "component_name": "Game12Aeropuerto",
+    "type": "Time Pressure",
+    "story_connection": "Coco and Mango are late! Run through the city to catch the airport bus before it leaves"
+  },
+  "target_file": "juegos.html",
+  "shared_components": ["GameWrapper", "GameIntroScreen", "GameEndScreen", "StarRating"],
+  "mechanics": {
+    "core_loop": "Run through obstacles to reach the bus stop before the countdown ends",
+    "controls": {
+      "tap": "Jump over low obstacles",
+      "swipe_down": "Slide under high obstacles",
+      "swipe_left_right": "Dodge sideways"
+    },
+    "obstacles": [
+      { "type": "puddle", "emoji": "💧", "action": "jump", "penalty": -2 },
+      { "type": "barrier", "emoji": "🚧", "action": "jump", "penalty": -3 },
+      { "type": "sign", "emoji": "🪧", "action": "slide", "penalty": -2 },
+      { "type": "cart", "emoji": "🛒", "action": "dodge", "penalty": -3 }
+    ],
+    "powerups": [
+      { "type": "clock", "emoji": "⏰", "effect": "+5 seconds" },
+      { "type": "sneakers", "emoji": "👟", "effect": "Speed boost 3s" }
+    ],
+    "countdown_seconds": 45,
+    "distance_meters": 200,
+    "bus_warning": "Bus starts leaving at 10 seconds remaining"
+  },
+  "scoring": {
+    "base_complete": 50,
+    "time_bonus": "Remaining seconds × 2",
+    "obstacle_penalty": -2,
+    "star_thresholds": { "1_star": 30, "2_stars": 50, "3_stars": 70 }
+  },
+  "visuals": {
+    "background": "City street scrolling, buildings, airport signs",
+    "character": "Coco running with suitcase",
+    "bus": "Visible at end, starts pulling away at 10s",
+    "urgency": "Screen edges pulse red when time low"
+  },
+  "instructions_text": "¡Corre al aeropuerto! Salta, deslízate y esquiva los obstáculos. ¡No pierdas el autobús!"
+}
