@@ -765,33 +765,227 @@
       const [screenFlash, setScreenFlash] = useState(false);
       const [cocoState, setCocoState] = useState('normal'); // normal, scared, happy, sad
       const [mangoMessage, setMangoMessage] = useState('');
+      const [visualHint, setVisualHint] = useState(null); // Shows what made the sound
+      const [showHint, setShowHint] = useState(false);
+      const audioContextRef = useRef(null);
 
       const totalRounds = 10;
 
-      // All possible sound sources
+      // Initialize audio context
+      useEffect(() => {
+        audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
+        return () => {
+          if (audioContextRef.current) {
+            audioContextRef.current.close();
+          }
+        };
+      }, []);
+
+      // Sound synthesis functions using Web Audio API
+      const playSound = (soundId) => {
+        const ctx = audioContextRef.current;
+        if (!ctx) return;
+
+        // Resume context if suspended (browser autoplay policy)
+        if (ctx.state === 'suspended') {
+          ctx.resume();
+        }
+
+        const now = ctx.currentTime;
+
+        switch (soundId) {
+          case 'thunder': {
+            // Thunder: Low rumble with noise burst
+            const noise = ctx.createBufferSource();
+            const bufferSize = ctx.sampleRate * 1.2;
+            const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+            const data = buffer.getChannelData(0);
+            for (let i = 0; i < bufferSize; i++) {
+              data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufferSize * 0.15));
+            }
+            noise.buffer = buffer;
+
+            const lowpass = ctx.createBiquadFilter();
+            lowpass.type = 'lowpass';
+            lowpass.frequency.value = 150;
+
+            const gain = ctx.createGain();
+            gain.gain.setValueAtTime(1.5, now);
+            gain.gain.exponentialDecayTo && gain.gain.exponentialDecayTo(0.01, now + 1.2);
+            gain.gain.setValueAtTime(1.5, now);
+            gain.gain.linearRampToValueAtTime(0.01, now + 1.2);
+
+            noise.connect(lowpass).connect(gain).connect(ctx.destination);
+            noise.start(now);
+            noise.stop(now + 1.2);
+            break;
+          }
+          case 'car': {
+            // Car: Horn honk
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(350, now);
+            osc.frequency.setValueAtTime(400, now + 0.1);
+            gain.gain.setValueAtTime(0.4, now);
+            gain.gain.setValueAtTime(0.4, now + 0.4);
+            gain.gain.linearRampToValueAtTime(0, now + 0.5);
+            osc.connect(gain).connect(ctx.destination);
+            osc.start(now);
+            osc.stop(now + 0.5);
+            break;
+          }
+          case 'door': {
+            // Door: Heavy thud
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(80, now);
+            osc.frequency.exponentialRampToValueAtTime(40, now + 0.2);
+            gain.gain.setValueAtTime(0.8, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+            osc.connect(gain).connect(ctx.destination);
+            osc.start(now);
+            osc.stop(now + 0.3);
+            break;
+          }
+          case 'drum': {
+            // Drum: Bass drum hit
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(150, now);
+            osc.frequency.exponentialRampToValueAtTime(50, now + 0.1);
+            gain.gain.setValueAtTime(1, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+            osc.connect(gain).connect(ctx.destination);
+            osc.start(now);
+            osc.stop(now + 0.4);
+            // Add click
+            const click = ctx.createOscillator();
+            const clickGain = ctx.createGain();
+            click.type = 'square';
+            click.frequency.value = 200;
+            clickGain.gain.setValueAtTime(0.3, now);
+            clickGain.gain.exponentialRampToValueAtTime(0.01, now + 0.05);
+            click.connect(clickGain).connect(ctx.destination);
+            click.start(now);
+            click.stop(now + 0.05);
+            break;
+          }
+          case 'balloon': {
+            // Balloon: Pop sound
+            const noise = ctx.createBufferSource();
+            const bufferSize = ctx.sampleRate * 0.15;
+            const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+            const data = buffer.getChannelData(0);
+            for (let i = 0; i < bufferSize; i++) {
+              data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufferSize * 0.1));
+            }
+            noise.buffer = buffer;
+            const highpass = ctx.createBiquadFilter();
+            highpass.type = 'highpass';
+            highpass.frequency.value = 1000;
+            const gain = ctx.createGain();
+            gain.gain.setValueAtTime(0.8, now);
+            noise.connect(highpass).connect(gain).connect(ctx.destination);
+            noise.start(now);
+            break;
+          }
+          case 'firework': {
+            // Firework: Whistle then bang
+            const whistle = ctx.createOscillator();
+            const whistleGain = ctx.createGain();
+            whistle.type = 'sine';
+            whistle.frequency.setValueAtTime(800, now);
+            whistle.frequency.linearRampToValueAtTime(2000, now + 0.3);
+            whistleGain.gain.setValueAtTime(0.2, now);
+            whistleGain.gain.linearRampToValueAtTime(0, now + 0.3);
+            whistle.connect(whistleGain).connect(ctx.destination);
+            whistle.start(now);
+            whistle.stop(now + 0.3);
+            // Bang
+            setTimeout(() => {
+              const noise = ctx.createBufferSource();
+              const bufferSize = ctx.sampleRate * 0.3;
+              const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+              const data = buffer.getChannelData(0);
+              for (let i = 0; i < bufferSize; i++) {
+                data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufferSize * 0.15));
+              }
+              noise.buffer = buffer;
+              const gain = ctx.createGain();
+              gain.gain.value = 0.7;
+              noise.connect(gain).connect(ctx.destination);
+              noise.start();
+            }, 350);
+            break;
+          }
+          case 'truck': {
+            // Truck: Deep engine rumble
+            const osc1 = ctx.createOscillator();
+            const osc2 = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc1.type = 'sawtooth';
+            osc1.frequency.value = 60;
+            osc2.type = 'sawtooth';
+            osc2.frequency.value = 62;
+            gain.gain.setValueAtTime(0.3, now);
+            gain.gain.linearRampToValueAtTime(0.4, now + 0.3);
+            gain.gain.linearRampToValueAtTime(0.1, now + 0.8);
+            gain.gain.linearRampToValueAtTime(0, now + 1);
+            osc1.connect(gain);
+            osc2.connect(gain);
+            gain.connect(ctx.destination);
+            osc1.start(now);
+            osc2.start(now);
+            osc1.stop(now + 1);
+            osc2.stop(now + 1);
+            break;
+          }
+          case 'book': {
+            // Book: Slam/thud
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(200, now);
+            osc.frequency.exponentialRampToValueAtTime(60, now + 0.08);
+            gain.gain.setValueAtTime(0.7, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+            osc.connect(gain).connect(ctx.destination);
+            osc.start(now);
+            osc.stop(now + 0.2);
+            break;
+          }
+        }
+      };
+
+      // All possible sound sources with visual hints
       const soundSources = [
-        { id: 'thunder', emoji: '⚡', label: 'Trueno', isThunder: true },
-        { id: 'car', emoji: '🚗', label: 'Coche', isThunder: false },
-        { id: 'door', emoji: '🚪', label: 'Puerta', isThunder: false },
-        { id: 'drum', emoji: '🥁', label: 'Tambor', isThunder: false },
-        { id: 'balloon', emoji: '🎈', label: 'Globo', isThunder: false },
-        { id: 'firework', emoji: '🎆', label: 'Cohete', isThunder: false },
-        { id: 'truck', emoji: '🚚', label: 'Camión', isThunder: false },
-        { id: 'book', emoji: '📚', label: 'Libro', isThunder: false },
+        { id: 'thunder', emoji: '⚡', label: 'Trueno', isThunder: true, hint: '⚡', hintBg: 'from-gray-800 to-purple-900' },
+        { id: 'car', emoji: '🚗', label: 'Coche', isThunder: false, hint: '🚗', hintBg: 'from-gray-600 to-gray-800' },
+        { id: 'door', emoji: '🚪', label: 'Puerta', isThunder: false, hint: '🚪', hintBg: 'from-amber-700 to-amber-900' },
+        { id: 'drum', emoji: '🥁', label: 'Tambor', isThunder: false, hint: '🥁', hintBg: 'from-red-600 to-red-800' },
+        { id: 'balloon', emoji: '🎈', label: 'Globo', isThunder: false, hint: '💥', hintBg: 'from-pink-500 to-red-600' },
+        { id: 'firework', emoji: '🎆', label: 'Cohete', isThunder: false, hint: '🎆', hintBg: 'from-indigo-800 to-black' },
+        { id: 'truck', emoji: '🚚', label: 'Camión', isThunder: false, hint: '🚚', hintBg: 'from-gray-700 to-gray-900' },
+        { id: 'book', emoji: '📚', label: 'Libro', isThunder: false, hint: '📕', hintBg: 'from-amber-600 to-amber-800' },
       ];
 
       const mangoCorrectMessages = [
-        '¡Muy bien! Escuchaste con cuidado.',
-        '¡Exacto! No era un trueno.',
-        '¡Bien hecho! Mantén la calma.',
+        '¡Muy bien! ¡Oíste y viste correctamente!',
+        '¡Exacto! ¡El sonido coincidió con la imagen!',
+        '¡Bien hecho! ¡Usaste tus oídos y ojos!',
         '¡Así se hace! Piensa antes de asustarte.',
-        '¡Perfecto! Eso es usar los oídos.',
+        '¡Perfecto! ¡Eso era lo que escuchaste!',
+        '¡Genial! No todo ruido fuerte es un trueno.',
       ];
 
       const mangoWrongMessages = [
-        '¡Ups! Escucha mejor la próxima vez.',
+        '¡Ups! Escucha y mira mejor la próxima.',
         'No te preocupes, sigue intentando.',
-        'Tranquilo, todos nos equivocamos.',
+        'Tranquilo, ¡fíjate bien en la pista!',
+        '¡Casi! Presta atención al sonido.',
       ];
 
       const startGame = () => {
@@ -830,15 +1024,29 @@
         setCocoState('scared');
         setMangoMessage('');
 
-        // Flash effect
-        setScreenFlash(true);
-        setTimeout(() => setScreenFlash(false), 150);
-        setTimeout(() => {
-          setScreenFlash(true);
-          setTimeout(() => setScreenFlash(false), 100);
-        }, 250);
+        // Show visual hint first
+        setVisualHint(correctAnswer);
+        setShowHint(true);
+        setGameState('hint');
 
-        setGameState('showing');
+        // Play the sound
+        playSound(correctAnswer.id);
+
+        // Flash effect for thunder
+        if (correctAnswer.isThunder) {
+          setScreenFlash(true);
+          setTimeout(() => setScreenFlash(false), 150);
+          setTimeout(() => {
+            setScreenFlash(true);
+            setTimeout(() => setScreenFlash(false), 100);
+          }, 250);
+        }
+
+        // Hide hint and show options after delay
+        setTimeout(() => {
+          setShowHint(false);
+          setGameState('showing');
+        }, 1500); // Show hint for 1.5 seconds
       };
 
       const handleAnswer = (answer) => {
@@ -892,7 +1100,7 @@
         return (
           <GameIntroScreen
             game={games[0]}
-            instructions="¡Escucha el ruido y adivina qué lo hizo! ¿Fue un trueno de verdad o algo más?"
+            instructions="👂 ¡Escucha el sonido, mira la pista, y adivina qué lo hizo!"
             onStart={startGame}
           />
         );
@@ -919,6 +1127,20 @@
             <div className="absolute inset-0 bg-white/80 z-40 pointer-events-none" />
           )}
 
+          {/* Visual hint overlay - shows what made the sound */}
+          {showHint && visualHint && (
+            <div className={`absolute inset-0 z-50 flex items-center justify-center bg-gradient-to-b ${visualHint.hintBg}`}>
+              <div className="text-center animate-pulse">
+                <span className="text-[120px] sm:text-[180px] block mb-4 drop-shadow-2xl" style={{ filter: 'drop-shadow(0 0 30px rgba(255,255,255,0.5))' }}>
+                  {visualHint.hint}
+                </span>
+                <p className="text-3xl sm:text-4xl font-bold text-white/80" style={{ textShadow: '2px 2px 8px rgba(0,0,0,0.8)' }}>
+                  ¡Escucha! 👂
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* Stats bar */}
           <div className="flex justify-between items-center p-3 bg-black/30 text-white z-10">
             <div className="flex gap-1">
@@ -932,24 +1154,32 @@
 
           {/* Main game area */}
           <div className="flex-1 flex flex-col items-center justify-center p-4 relative">
-            {/* BOOM text */}
+            {/* Question prompt after hint */}
             {gameState === 'showing' && (
               <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20">
-                <p className="text-5xl sm:text-6xl font-bold text-yellow-300 animate-bounce"
+                <p className="text-3xl sm:text-4xl font-bold text-white animate-bounce"
                   style={{ textShadow: '3px 3px 6px rgba(0,0,0,0.8)' }}>
-                  ¡¡PUUUUM!!
+                  🤔 ¿Qué fue?
                 </p>
               </div>
             )}
 
-            {/* Question */}
+            {/* Question + Replay button */}
             <div className="bg-white/90 rounded-2xl p-4 sm:p-6 shadow-xl mb-6 text-center max-w-md">
               <p className="text-xl sm:text-2xl font-bold text-gray-800 mb-2">
-                🤔 ¿Qué fue ese ruido?
+                🔊 ¿Qué hizo ese ruido?
               </p>
-              <p className="text-base sm:text-lg text-gray-600">
-                ¡Escucha bien y elige la respuesta correcta!
+              <p className="text-base sm:text-lg text-gray-600 mb-3">
+                ¡Viste algo y escuchaste algo! ¿Qué era?
               </p>
+              {gameState === 'showing' && currentSound && (
+                <button
+                  onClick={() => playSound(currentSound.id)}
+                  className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-full text-sm font-bold transition-all active:scale-95"
+                >
+                  🔊 Escuchar otra vez
+                </button>
+              )}
             </div>
 
             {/* Coco - reacts to answers */}
