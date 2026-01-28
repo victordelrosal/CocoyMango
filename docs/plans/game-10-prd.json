@@ -1,0 +1,92 @@
+{
+  "prd_version": "1.0",
+  "game": {
+    "id": 10,
+    "title": "La carrera de barquitos",
+    "component_name": "Game10Barquitos",
+    "type": "Racing",
+    "story_connection": "Coco and Mango are racing paper boats in the stream - tap to blow your boat forward!"
+  },
+  "target_file": "juegos.html",
+  "shared_components": [
+    "GameWrapper",
+    "GameIntroScreen",
+    "GameEndScreen",
+    "StarRating"
+  ],
+  "mechanics": {
+    "core_loop": "Tap repeatedly to blow your paper boat forward. Avoid debris and rescue Mango if he falls in!",
+    "controls": {
+      "tap_repeatedly": "Each tap blows the boat forward a bit",
+      "hold": "Alternative: hold to blow continuously (less efficient)",
+      "swipe_up_down": "Steer boat to avoid obstacles"
+    },
+    "race": {
+      "distance": "100 meters to finish line",
+      "boat_speed": "Based on tap frequency",
+      "drift": "Boat slowly drifts toward obstacles if not steered"
+    },
+    "obstacles": [
+      { "type": "stick", "emoji": "🪵", "effect": "Slows boat down" },
+      { "type": "leaf", "emoji": "🍂", "effect": "Minor slowdown" },
+      { "type": "rock", "emoji": "🪨", "effect": "Full stop, must tap to unstick" }
+    ],
+    "events": [
+      { "type": "mango_falls", "description": "Mango falls in water, tap rescue button quickly!" },
+      { "type": "current_boost", "emoji": "💨", "effect": "Water current speeds you up" }
+    ],
+    "mango_rescue": {
+      "time_limit_seconds": 3,
+      "penalty_if_missed": "Lose 10 seconds"
+    }
+  },
+  "states": {
+    "intro": "Show GameIntroScreen with instructions",
+    "countdown": "3-2-1-Go countdown",
+    "racing": "Active race, tapping to move",
+    "obstacle_hit": "Brief slowdown/stop",
+    "mango_rescue": "Quick time event to save Mango",
+    "finished": "Crossed finish line",
+    "ended": "Show GameEndScreen"
+  },
+  "scoring": {
+    "base_time_score": "90 - finish_time_seconds",
+    "obstacle_penalty": -5,
+    "mango_rescue_bonus": 15,
+    "mango_missed_penalty": -10,
+    "star_thresholds": {
+      "1_star": 30,
+      "2_stars": 50,
+      "3_stars": 70
+    }
+  },
+  "visuals": {
+    "background": "Stream/river view from above, water flowing",
+    "boat": "Paper boat (origami style) with Coco on it",
+    "mango_boat": "Second boat with Mango (NPC, follows behind)",
+    "water": "Animated blue water with ripples",
+    "finish_line": "Banner across stream at end"
+  },
+  "audio": {
+    "required": false,
+    "optional": [
+      { "event": "blow", "description": "Soft blow/wind sound" },
+      { "event": "splash", "description": "Water splash" },
+      { "event": "rescue", "description": "Mango saying thanks" }
+    ]
+  },
+  "instructions_text": "¡Sopla tu barquito! Toca rápido para avanzar. Esquiva los obstáculos y ¡rescata a Mango si se cae!",
+  "implementation_notes": [
+    "Side-scrolling or top-down river view",
+    "Tap counter determines speed (taps per second)",
+    "Boat position advances based on tap rate",
+    "Obstacles scroll toward boat (or boat moves through level)",
+    "Mango rescue: overlay with big rescue button, countdown timer",
+    "Water ripple effects with CSS animation",
+    "Distance meter shows progress to finish"
+  ],
+  "after_implementation": {
+    "update_available_games": "Add 10 to availableGames array",
+    "add_game_route": "Add if (currentGame === 10) route in GamesApp"
+  }
+}

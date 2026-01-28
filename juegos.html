@@ -3433,6 +3433,2021 @@
       );
     };
 
+    // ==================== GAME 7: LA ALCANTARILLA ====================
+    // Maze navigation with fog-of-war and flashlight mechanic
+
+    const Game7Alcantarilla = ({ isPaused, onGameEnd }) => {
+      const [gameState, setGameState] = useState('intro'); // intro, playing, victory, defeat, ended
+      const [score, setScore] = useState(0);
+      const [cocoPos, setCocoPos] = useState({ x: 1, y: 1 });
+      const [coins, setCoins] = useState([]);
+      const [batteries, setBatteries] = useState([]);
+      const [coinsCollected, setCoinsCollected] = useState(0);
+      const [flashlightOn, setFlashlightOn] = useState(false);
+      const [batteryLevel, setBatteryLevel] = useState(15); // 15 seconds max
+      const [timeLeft, setTimeLeft] = useState(75); // 75 seconds
+      const [exitFound, setExitFound] = useState(false);
+      const [floatingTexts, setFloatingTexts] = useState([]);
+      const gameRef = useRef(null);
+      const floatIdRef = useRef(0);
+      const batteryDrainRef = useRef(null);
+      const touchStartRef = useRef(null);
+
+      // Maze definition (0 = wall, 1 = path, 2 = exit)
+      // 13x9 grid - simple but with branching paths
+      const maze = [
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 0],
+        [0, 1, 0, 1, 0, 1, 0, 0, 0, 1, 0, 1, 0],
+        [0, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0],
+        [0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0],
+        [0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 1, 0],
+        [0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0],
+        [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      ];
+
+      const MAZE_WIDTH = maze[0].length;
+      const MAZE_HEIGHT = maze.length;
+
+      // Coin positions (placed at interesting spots in the maze)
+      const initialCoins = [
+        { x: 5, y: 1, id: 1 },
+        { x: 9, y: 1, id: 2 },
+        { x: 1, y: 5, id: 3 },
+        { x: 7, y: 5, id: 4 },
+        { x: 7, y: 7, id: 5 },
+      ];
+
+      // Battery positions
+      const initialBatteries = [
+        { x: 3, y: 3, id: 1 },
+        { x: 9, y: 3, id: 2 },
+      ];
+
+      const startGame = () => {
+        setGameState('playing');
+        setScore(0);
+        setCocoPos({ x: 1, y: 1 });
+        setCoins(initialCoins);
+        setBatteries(initialBatteries);
+        setCoinsCollected(0);
+        setFlashlightOn(false);
+        setBatteryLevel(15);
+        setTimeLeft(75);
+        setExitFound(false);
+        setFloatingTexts([]);
+      };
+
+      // Add floating text
+      const addFloatingText = (text, x, y, color = '#FFD700') => {
+        const id = floatIdRef.current++;
+        setFloatingTexts(prev => [...prev, { id, text, x, y, color }]);
+        setTimeout(() => {
+          setFloatingTexts(prev => prev.filter(f => f.id !== id));
+        }, 1000);
+      };
+
+      // Timer countdown
+      useEffect(() => {
+        if (gameState !== 'playing' || isPaused) return;
+
+        const timer = setInterval(() => {
+          setTimeLeft(prev => {
+            if (prev <= 1) {
+              setGameState('defeat');
+              return 0;
+            }
+            return prev - 1;
+          });
+        }, 1000);
+
+        return () => clearInterval(timer);
+      }, [gameState, isPaused]);
+
+      // Flashlight battery drain
+      useEffect(() => {
+        if (gameState !== 'playing' || isPaused || !flashlightOn) {
+          if (batteryDrainRef.current) clearInterval(batteryDrainRef.current);
+          return;
+        }
+
+        batteryDrainRef.current = setInterval(() => {
+          setBatteryLevel(prev => {
+            if (prev <= 0.1) {
+              setFlashlightOn(false);
+              return 0;
+            }
+            return prev - 0.1;
+          });
+        }, 100);
+
+        return () => {
+          if (batteryDrainRef.current) clearInterval(batteryDrainRef.current);
+        };
+      }, [gameState, isPaused, flashlightOn]);
+
+      // Check if can move to position
+      const canMove = (x, y) => {
+        if (x < 0 || x >= MAZE_WIDTH || y < 0 || y >= MAZE_HEIGHT) return false;
+        return maze[y][x] !== 0;
+      };
+
+      // Move Coco
+      const moveCoco = (dx, dy) => {
+        if (gameState !== 'playing' || isPaused) return;
+
+        const newX = cocoPos.x + dx;
+        const newY = cocoPos.y + dy;
+
+        if (!canMove(newX, newY)) return;
+
+        setCocoPos({ x: newX, y: newY });
+
+        // Check for coin collection
+        const coinIndex = coins.findIndex(c => c.x === newX && c.y === newY);
+        if (coinIndex !== -1) {
+          setCoins(prev => prev.filter((_, i) => i !== coinIndex));
+          setCoinsCollected(prev => prev + 1);
+          setScore(prev => prev + 10);
+          addFloatingText('+10 🪙', newX, newY);
+        }
+
+        // Check for battery pickup
+        const batteryIndex = batteries.findIndex(b => b.x === newX && b.y === newY);
+        if (batteryIndex !== -1) {
+          setBatteries(prev => prev.filter((_, i) => i !== batteryIndex));
+          setBatteryLevel(prev => Math.min(15, prev + 5));
+          addFloatingText('+5🔋', newX, newY, '#22C55E');
+        }
+
+        // Check for exit (only if all coins collected)
+        if (maze[newY][newX] === 2) {
+          if (coinsCollected >= 4) { // Need at least 4 of 5 coins (collecting the 5th completes it)
+            setExitFound(true);
+            // Add time bonus
+            const timeBonus = timeLeft * 2;
+            setScore(prev => prev + timeBonus);
+            setGameState('victory');
+          }
+        }
+      };
+
+      // Handle keyboard input
+      useEffect(() => {
+        if (gameState !== 'playing' || isPaused) return;
+
+        const handleKeyDown = (e) => {
+          switch (e.key) {
+            case 'ArrowUp':
+            case 'w':
+            case 'W':
+              moveCoco(0, -1);
+              break;
+            case 'ArrowDown':
+            case 's':
+            case 'S':
+              moveCoco(0, 1);
+              break;
+            case 'ArrowLeft':
+            case 'a':
+            case 'A':
+              moveCoco(-1, 0);
+              break;
+            case 'ArrowRight':
+            case 'd':
+            case 'D':
+              moveCoco(1, 0);
+              break;
+            case ' ':
+              if (batteryLevel > 0) {
+                setFlashlightOn(prev => !prev);
+              }
+              break;
+          }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+      }, [gameState, isPaused, cocoPos, batteryLevel]);
+
+      // Touch controls
+      const handleTouchStart = (e) => {
+        if (gameState !== 'playing' || isPaused) return;
+        const touch = e.touches[0];
+        touchStartRef.current = { x: touch.clientX, y: touch.clientY };
+      };
+
+      const handleTouchEnd = (e) => {
+        if (gameState !== 'playing' || isPaused || !touchStartRef.current) return;
+
+        const touch = e.changedTouches[0];
+        const dx = touch.clientX - touchStartRef.current.x;
+        const dy = touch.clientY - touchStartRef.current.y;
+        const minSwipe = 30;
+
+        if (Math.abs(dx) < minSwipe && Math.abs(dy) < minSwipe) {
+          // Tap - toggle flashlight
+          if (batteryLevel > 0) {
+            setFlashlightOn(prev => !prev);
+          }
+          return;
+        }
+
+        if (Math.abs(dx) > Math.abs(dy)) {
+          // Horizontal swipe
+          moveCoco(dx > 0 ? 1 : -1, 0);
+        } else {
+          // Vertical swipe
+          moveCoco(0, dy > 0 ? 1 : -1);
+        }
+
+        touchStartRef.current = null;
+      };
+
+      // Calculate visibility
+      const isVisible = (cellX, cellY) => {
+        const dx = Math.abs(cellX - cocoPos.x);
+        const dy = Math.abs(cellY - cocoPos.y);
+        const distance = Math.sqrt(dx * dx + dy * dy);
+
+        if (flashlightOn) {
+          return distance <= 3.5; // Larger radius with flashlight
+        }
+        return distance <= 1.2; // Small radius without flashlight
+      };
+
+      // Get cell opacity based on distance
+      const getCellOpacity = (cellX, cellY) => {
+        if (!isVisible(cellX, cellY)) return 0;
+
+        const dx = Math.abs(cellX - cocoPos.x);
+        const dy = Math.abs(cellY - cocoPos.y);
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        const maxDist = flashlightOn ? 3.5 : 1.2;
+
+        return Math.max(0.3, 1 - (distance / maxDist) * 0.7);
+      };
+
+      const getStars = () => {
+        if (gameState === 'defeat') return 0;
+        const finalScore = score;
+        if (finalScore >= 90) return 3;
+        if (finalScore >= 60) return 2;
+        if (finalScore >= 30) return 1;
+        return 0;
+      };
+
+      const getMessage = () => {
+        if (gameState === 'defeat') return '¡Se acabó el tiempo!';
+        if (getStars() >= 3) return '¡Increíble! ¡Encontraste todas las monedas!';
+        if (getStars() >= 2) return '¡Muy bien! ¡Escapaste del alcantarillado!';
+        return '¡Lograste salir!';
+      };
+
+      // Intro screen
+      if (gameState === 'intro') {
+        return (
+          <GameIntroScreen
+            game={games[6]}
+            instructions="¡Coco dejó caer sus monedas en la alcantarilla! Desliza para moverte por el laberinto oscuro. Toca para usar la linterna (¡batería limitada!). Encuentra las 5 monedas y la salida."
+            onStart={startGame}
+          />
+        );
+      }
+
+      // End screen
+      if (gameState === 'ended' || gameState === 'victory' || gameState === 'defeat') {
+        return (
+          <GameEndScreen
+            score={score}
+            stars={getStars()}
+            message={getMessage()}
+            onRestart={startGame}
+            onExit={onGameEnd}
+          />
+        );
+      }
+
+      // Calculate cell size based on screen
+      const cellSize = `min(calc((100vw - 32px) / ${MAZE_WIDTH}), calc((100vh - 180px) / ${MAZE_HEIGHT}))`;
+
+      return (
+        <div
+          ref={gameRef}
+          className="h-full flex flex-col bg-gradient-to-b from-stone-900 to-stone-800 overflow-hidden"
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
+        >
+          {/* HUD */}
+          <div className="p-3 flex justify-between items-center text-white bg-black/40">
+            <div className="flex items-center gap-3">
+              <span className="text-lg">🪙 {coinsCollected}/5</span>
+              <span className="text-lg">⏱️ {timeLeft}s</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1">
+                <span className="text-lg">🔋</span>
+                <div className="w-16 h-3 bg-gray-700 rounded-full overflow-hidden">
+                  <div
+                    className={`h-full transition-all ${
+                      batteryLevel > 5 ? 'bg-green-500' : batteryLevel > 2 ? 'bg-yellow-500' : 'bg-red-500'
+                    }`}
+                    style={{ width: `${(batteryLevel / 15) * 100}%` }}
+                  />
+                </div>
+              </div>
+              <span className="text-lg">💡 {flashlightOn ? 'ON' : 'OFF'}</span>
+            </div>
+          </div>
+
+          {/* Score */}
+          <div className="text-center py-1 text-white bg-black/20">
+            <span className="text-xl font-bold">Puntos: {score}</span>
+          </div>
+
+          {/* Maze */}
+          <div className="flex-1 flex items-center justify-center p-4">
+            <div
+              className="relative"
+              style={{
+                display: 'grid',
+                gridTemplateColumns: `repeat(${MAZE_WIDTH}, ${cellSize})`,
+                gridTemplateRows: `repeat(${MAZE_HEIGHT}, ${cellSize})`,
+                gap: '1px',
+              }}
+            >
+              {maze.map((row, y) =>
+                row.map((cell, x) => {
+                  const visible = isVisible(x, y);
+                  const opacity = getCellOpacity(x, y);
+                  const isCoco = cocoPos.x === x && cocoPos.y === y;
+                  const coin = coins.find(c => c.x === x && c.y === y);
+                  const battery = batteries.find(b => b.x === x && b.y === y);
+                  const isExit = cell === 2;
+
+                  return (
+                    <div
+                      key={`${x}-${y}`}
+                      className="relative flex items-center justify-center transition-all duration-200"
+                      style={{
+                        backgroundColor: cell === 0 ? '#1c1917' : '#78716c',
+                        opacity: visible ? opacity : 0,
+                        boxShadow: isCoco && flashlightOn ? '0 0 20px 10px rgba(255, 200, 100, 0.3)' : 'none',
+                      }}
+                    >
+                      {/* Wall texture */}
+                      {cell === 0 && visible && (
+                        <div className="absolute inset-0 opacity-30">
+                          <div className="w-full h-1/2 bg-stone-800 border-b border-stone-700" />
+                          <div className="w-full h-1/2 bg-stone-900" />
+                        </div>
+                      )}
+
+                      {/* Floor texture */}
+                      {cell !== 0 && visible && (
+                        <div className="absolute inset-0 bg-gradient-to-br from-stone-500/20 to-stone-700/20" />
+                      )}
+
+                      {/* Exit ladder */}
+                      {isExit && visible && (
+                        <span className="text-lg z-10">🪜</span>
+                      )}
+
+                      {/* Coin */}
+                      {coin && visible && (
+                        <span className="text-lg animate-pulse z-10">🪙</span>
+                      )}
+
+                      {/* Battery */}
+                      {battery && visible && (
+                        <span className="text-lg animate-bounce z-10">🔋</span>
+                      )}
+
+                      {/* Coco */}
+                      {isCoco && (
+                        <div className="absolute inset-0 flex items-center justify-center z-20">
+                          <span className="text-xl">🦎</span>
+                          {flashlightOn && (
+                            <div
+                              className="absolute w-4 h-4 bg-yellow-300 rounded-full animate-pulse"
+                              style={{
+                                boxShadow: '0 0 15px 8px rgba(255, 200, 100, 0.6)',
+                              }}
+                            />
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })
+              )}
+
+              {/* Floating texts */}
+              {floatingTexts.map(ft => (
+                <div
+                  key={ft.id}
+                  className="absolute pointer-events-none z-30 font-bold text-lg"
+                  style={{
+                    left: `calc(${ft.x} * ${cellSize} + ${cellSize} / 2)`,
+                    top: `calc(${ft.y} * ${cellSize})`,
+                    transform: 'translateX(-50%)',
+                    color: ft.color,
+                    animation: 'floatUp 1s ease-out forwards',
+                  }}
+                >
+                  {ft.text}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* D-pad controls for mobile */}
+          <div className="p-4 flex justify-center">
+            <div className="grid grid-cols-3 gap-1 w-36">
+              <div />
+              <button
+                className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center text-white text-2xl active:bg-white/40"
+                onClick={() => moveCoco(0, -1)}
+              >
+                ▲
+              </button>
+              <div />
+              <button
+                className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center text-white text-2xl active:bg-white/40"
+                onClick={() => moveCoco(-1, 0)}
+              >
+                ◀
+              </button>
+              <button
+                className={`w-12 h-12 rounded-lg flex items-center justify-center text-xl active:bg-yellow-500 ${
+                  flashlightOn ? 'bg-yellow-400 text-black' : 'bg-white/20 text-white'
+                } ${batteryLevel <= 0 ? 'opacity-50' : ''}`}
+                onClick={() => batteryLevel > 0 && setFlashlightOn(prev => !prev)}
+                disabled={batteryLevel <= 0}
+              >
+                💡
+              </button>
+              <button
+                className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center text-white text-2xl active:bg-white/40"
+                onClick={() => moveCoco(1, 0)}
+              >
+                ▶
+              </button>
+              <div />
+              <button
+                className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center text-white text-2xl active:bg-white/40"
+                onClick={() => moveCoco(0, 1)}
+              >
+                ▼
+              </button>
+              <div />
+            </div>
+          </div>
+
+          {/* Hint text */}
+          <div className="text-center pb-2 text-white/60 text-sm">
+            {coinsCollected >= 5
+              ? '¡Todas las monedas! Encuentra la salida 🪜'
+              : 'Desliza o usa los botones para moverte'}
+          </div>
+
+          {/* CSS animations */}
+          <style>{`
+            @keyframes floatUp {
+              0% { opacity: 1; transform: translateX(-50%) translateY(0); }
+              100% { opacity: 0; transform: translateX(-50%) translateY(-30px); }
+            }
+          `}</style>
+        </div>
+      );
+    };
+
+    // ==================== GAME 8: EL PAPALOTE ====================
+    // Kite balance game - keep the kite stable as wind changes direction
+
+    const Game8Papalote = ({ isPaused, onGameEnd }) => {
+      const [gameState, setGameState] = useState('intro'); // intro, playing, ended
+      const [score, setScore] = useState(0);
+      const [lives, setLives] = useState(3);
+      const [kitePosition, setKitePosition] = useState(50); // 0-100, 50 = center
+      const [windDirection, setWindDirection] = useState(0); // -1 = left, 0 = none, 1 = right
+      const [windIntensity, setWindIntensity] = useState(1); // 1-3
+      const [timeLeft, setTimeLeft] = useState(60);
+      const [gustWarning, setGustWarning] = useState(false);
+      const [birdHelper, setBirdHelper] = useState(null);
+      const [floatingTexts, setFloatingTexts] = useState([]);
+      const gameRef = useRef(null);
+      const floatIdRef = useRef(0);
+      const gameLoopRef = useRef(null);
+      const windChangeRef = useRef(null);
+      const isDraggingRef = useRef(false);
+      const lastTouchXRef = useRef(null);
+
+      const DANGER_ZONE = 15; // Position <= 15 or >= 85 is danger
+      const CRASH_ZONE = 5;   // Position <= 5 or >= 95 = crash
+
+      const startGame = () => {
+        setGameState('playing');
+        setScore(0);
+        setLives(3);
+        setKitePosition(50);
+        setWindDirection(0);
+        setWindIntensity(1);
+        setTimeLeft(60);
+        setGustWarning(false);
+        setBirdHelper(null);
+        setFloatingTexts([]);
+      };
+
+      // Add floating text
+      const addFloatingText = (text, x, y, color = '#FFD700') => {
+        const id = floatIdRef.current++;
+        setFloatingTexts(prev => [...prev, { id, text, x, y, color }]);
+        setTimeout(() => {
+          setFloatingTexts(prev => prev.filter(f => f.id !== id));
+        }, 1000);
+      };
+
+      // Timer countdown
+      useEffect(() => {
+        if (gameState !== 'playing' || isPaused) return;
+
+        const timer = setInterval(() => {
+          setTimeLeft(prev => {
+            if (prev <= 1) {
+              setGameState('ended');
+              return 0;
+            }
+            return prev - 1;
+          });
+        }, 1000);
+
+        return () => clearInterval(timer);
+      }, [gameState, isPaused]);
+
+      // Game loop - apply wind drift and score
+      useEffect(() => {
+        if (gameState !== 'playing' || isPaused) return;
+
+        gameLoopRef.current = setInterval(() => {
+          setKitePosition(prev => {
+            // Apply wind drift
+            const drift = windDirection * windIntensity * 0.5;
+            let newPos = prev + drift;
+
+            // Check for crash
+            if (newPos <= CRASH_ZONE || newPos >= 100 - CRASH_ZONE) {
+              // Crash! Lose a life
+              setLives(l => {
+                const newLives = l - 1;
+                if (newLives <= 0) {
+                  setGameState('ended');
+                }
+                return newLives;
+              });
+              addFloatingText('💥 ¡Crash!', 50, 30, '#EF4444');
+              return 50; // Reset to center
+            }
+
+            return Math.max(CRASH_ZONE, Math.min(100 - CRASH_ZONE, newPos));
+          });
+
+          // Score points for staying balanced
+          setKitePosition(pos => {
+            const distFromCenter = Math.abs(pos - 50);
+            if (distFromCenter < 10) {
+              setScore(s => s + 2); // Bonus for center
+            } else if (distFromCenter < 25) {
+              setScore(s => s + 1);
+            }
+            return pos;
+          });
+        }, 50);
+
+        return () => {
+          if (gameLoopRef.current) clearInterval(gameLoopRef.current);
+        };
+      }, [gameState, isPaused, windDirection, windIntensity]);
+
+      // Wind changes
+      useEffect(() => {
+        if (gameState !== 'playing' || isPaused) return;
+
+        const changeWind = () => {
+          // Random chance of strong gust
+          const isGust = Math.random() < 0.2;
+
+          if (isGust) {
+            // Show warning first
+            setGustWarning(true);
+            setTimeout(() => {
+              setGustWarning(false);
+              setWindDirection(Math.random() < 0.5 ? -1 : 1);
+              setWindIntensity(3);
+              // Gust lasts shorter
+              setTimeout(() => {
+                setWindIntensity(1 + Math.random());
+              }, 1500);
+            }, 1000);
+          } else {
+            // Normal wind change
+            const directions = [-1, 0, 1];
+            setWindDirection(directions[Math.floor(Math.random() * directions.length)]);
+            setWindIntensity(1 + Math.random() * 1.5);
+          }
+        };
+
+        // Initial wind
+        changeWind();
+
+        // Change wind every 3-8 seconds
+        const scheduleNextChange = () => {
+          const delay = 3000 + Math.random() * 5000;
+          windChangeRef.current = setTimeout(() => {
+            changeWind();
+            scheduleNextChange();
+          }, delay);
+        };
+        scheduleNextChange();
+
+        return () => {
+          if (windChangeRef.current) clearTimeout(windChangeRef.current);
+        };
+      }, [gameState, isPaused]);
+
+      // Bird helper - appears randomly and nudges kite toward center
+      useEffect(() => {
+        if (gameState !== 'playing' || isPaused) return;
+
+        const spawnBird = () => {
+          // Only spawn if kite is off-center
+          setKitePosition(pos => {
+            if (Math.abs(pos - 50) > 20 && Math.random() < 0.3) {
+              const birdSide = pos < 50 ? 'right' : 'left';
+              setBirdHelper({ side: birdSide, active: true });
+
+              // Bird nudges kite toward center
+              setTimeout(() => {
+                setKitePosition(p => {
+                  const nudge = birdSide === 'left' ? 10 : -10;
+                  addFloatingText('🐦 ¡Ayuda!', 50, 20, '#60A5FA');
+                  setScore(s => Math.max(0, s - 2)); // Small penalty for bird help
+                  return Math.max(CRASH_ZONE, Math.min(100 - CRASH_ZONE, p + nudge));
+                });
+                setBirdHelper(null);
+              }, 1000);
+            }
+            return pos;
+          });
+        };
+
+        const birdInterval = setInterval(spawnBird, 8000 + Math.random() * 7000);
+        return () => clearInterval(birdInterval);
+      }, [gameState, isPaused]);
+
+      // Player input - drag/touch controls
+      const handleMouseDown = (e) => {
+        if (gameState !== 'playing' || isPaused) return;
+        isDraggingRef.current = true;
+        lastTouchXRef.current = e.clientX;
+      };
+
+      const handleMouseMove = (e) => {
+        if (!isDraggingRef.current || gameState !== 'playing' || isPaused) return;
+        const dx = e.clientX - lastTouchXRef.current;
+        lastTouchXRef.current = e.clientX;
+        setKitePosition(prev => Math.max(CRASH_ZONE, Math.min(100 - CRASH_ZONE, prev + dx * 0.3)));
+      };
+
+      const handleMouseUp = () => {
+        isDraggingRef.current = false;
+      };
+
+      const handleTouchStart = (e) => {
+        if (gameState !== 'playing' || isPaused) return;
+        isDraggingRef.current = true;
+        lastTouchXRef.current = e.touches[0].clientX;
+      };
+
+      const handleTouchMove = (e) => {
+        if (!isDraggingRef.current || gameState !== 'playing' || isPaused) return;
+        const dx = e.touches[0].clientX - lastTouchXRef.current;
+        lastTouchXRef.current = e.touches[0].clientX;
+        setKitePosition(prev => Math.max(CRASH_ZONE, Math.min(100 - CRASH_ZONE, prev + dx * 0.3)));
+      };
+
+      const handleTouchEnd = () => {
+        isDraggingRef.current = false;
+      };
+
+      // Tap controls for sides
+      const handleTapLeft = () => {
+        if (gameState !== 'playing' || isPaused) return;
+        setKitePosition(prev => Math.max(CRASH_ZONE, prev - 8));
+      };
+
+      const handleTapRight = () => {
+        if (gameState !== 'playing' || isPaused) return;
+        setKitePosition(prev => Math.min(100 - CRASH_ZONE, prev + 8));
+      };
+
+      const getStars = () => {
+        if (score >= 80) return 3;
+        if (score >= 50) return 2;
+        if (score >= 30) return 1;
+        return 0;
+      };
+
+      const getMessage = () => {
+        const stars = getStars();
+        if (stars >= 3) return '¡Increíble! ¡Eres un maestro del papalote!';
+        if (stars >= 2) return '¡Muy bien! ¡El papalote voló alto!';
+        if (stars >= 1) return '¡Buen intento! Sigue practicando.';
+        return '¡El viento fue muy fuerte!';
+      };
+
+      // Get danger level for visual feedback
+      const getDangerLevel = () => {
+        if (kitePosition <= DANGER_ZONE || kitePosition >= 100 - DANGER_ZONE) return 'danger';
+        if (kitePosition <= 25 || kitePosition >= 75) return 'warning';
+        return 'safe';
+      };
+
+      // Kite tilt angle based on position
+      const getKiteTilt = () => {
+        const offset = kitePosition - 50;
+        return offset * 0.6; // Max ~30 degrees tilt
+      };
+
+      // Intro screen
+      if (gameState === 'intro') {
+        return (
+          <GameIntroScreen
+            game={games[7]}
+            instructions="¡Mantén el papalote en el aire! Arrastra o toca los lados para equilibrarlo cuando cambie el viento. ¡Cuidado con las ráfagas fuertes!"
+            onStart={startGame}
+          />
+        );
+      }
+
+      // End screen
+      if (gameState === 'ended') {
+        return (
+          <GameEndScreen
+            score={score}
+            stars={getStars()}
+            message={getMessage()}
+            onRestart={startGame}
+            onExit={onGameEnd}
+          />
+        );
+      }
+
+      const dangerLevel = getDangerLevel();
+
+      return (
+        <div
+          ref={gameRef}
+          className="h-full flex flex-col bg-gradient-to-b from-sky-300 via-sky-400 to-sky-500 overflow-hidden select-none"
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
+          onMouseLeave={handleMouseUp}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+        >
+          {/* HUD */}
+          <div className="p-3 flex justify-between items-center text-white bg-black/20">
+            <div className="flex items-center gap-3">
+              <span className="text-lg">❤️ {lives}</span>
+              <span className="text-lg">⏱️ {timeLeft}s</span>
+            </div>
+            <div className="text-xl font-bold">
+              {score} pts
+            </div>
+          </div>
+
+          {/* Wind indicator */}
+          <div className="flex justify-center items-center gap-2 py-2 bg-white/20">
+            <span className="text-sm text-white">Viento:</span>
+            <div className="flex items-center gap-1">
+              {windDirection === -1 && (
+                <span className={`text-2xl ${windIntensity >= 2.5 ? 'animate-pulse' : ''}`}>
+                  {'◀'.repeat(Math.ceil(windIntensity))}
+                </span>
+              )}
+              {windDirection === 0 && <span className="text-lg text-white/70">- calma -</span>}
+              {windDirection === 1 && (
+                <span className={`text-2xl ${windIntensity >= 2.5 ? 'animate-pulse' : ''}`}>
+                  {'▶'.repeat(Math.ceil(windIntensity))}
+                </span>
+              )}
+            </div>
+            {gustWarning && (
+              <span className="ml-2 text-yellow-300 font-bold animate-pulse">💨 ¡RÁFAGA!</span>
+            )}
+          </div>
+
+          {/* Sky area with clouds and kite */}
+          <div className="flex-1 relative overflow-hidden">
+            {/* Animated clouds */}
+            <div className="absolute inset-0 pointer-events-none">
+              <div className="absolute text-6xl opacity-40 animate-cloud1" style={{ top: '10%', left: '-10%' }}>☁️</div>
+              <div className="absolute text-5xl opacity-30 animate-cloud2" style={{ top: '25%', left: '-5%' }}>☁️</div>
+              <div className="absolute text-7xl opacity-35 animate-cloud3" style={{ top: '40%', left: '-15%' }}>☁️</div>
+            </div>
+
+            {/* Wind effect leaves */}
+            {windDirection !== 0 && (
+              <div className="absolute inset-0 pointer-events-none overflow-hidden">
+                {[...Array(5)].map((_, i) => (
+                  <div
+                    key={i}
+                    className="absolute text-2xl"
+                    style={{
+                      top: `${15 + i * 15}%`,
+                      left: windDirection === 1 ? '-5%' : '105%',
+                      animation: `windLeaf ${2 / windIntensity}s linear infinite`,
+                      animationDelay: `${i * 0.3}s`,
+                    }}
+                  >
+                    🍃
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Bird helper */}
+            {birdHelper && (
+              <div
+                className="absolute text-4xl transition-all duration-1000"
+                style={{
+                  top: '30%',
+                  left: birdHelper.side === 'left' ? '10%' : '80%',
+                  animation: 'birdFly 1s ease-in-out',
+                }}
+              >
+                🐦
+              </div>
+            )}
+
+            {/* Kite */}
+            <div
+              className="absolute transition-all duration-100"
+              style={{
+                left: `${kitePosition}%`,
+                top: '25%',
+                transform: `translateX(-50%) rotate(${getKiteTilt()}deg)`,
+              }}
+            >
+              {/* Kite SVG */}
+              <svg viewBox="0 0 100 120" className="w-24 h-28">
+                {/* Kite body - diamond shape */}
+                <polygon
+                  points="50,5 85,50 50,95 15,50"
+                  fill="url(#kiteGradient)"
+                  stroke="#7C3AED"
+                  strokeWidth="2"
+                />
+                {/* Kite cross bars */}
+                <line x1="50" y1="5" x2="50" y2="95" stroke="#7C3AED" strokeWidth="2" />
+                <line x1="15" y1="50" x2="85" y2="50" stroke="#7C3AED" strokeWidth="2" />
+                {/* Decorations */}
+                <circle cx="50" cy="35" r="8" fill="#FBBF24" />
+                <circle cx="35" cy="55" r="5" fill="#F472B6" />
+                <circle cx="65" cy="55" r="5" fill="#34D399" />
+                {/* Tail bows */}
+                <ellipse cx="50" cy="105" rx="8" ry="4" fill="#F472B6" />
+                <ellipse cx="50" cy="115" rx="6" ry="3" fill="#FBBF24" />
+                {/* Gradient definition */}
+                <defs>
+                  <linearGradient id="kiteGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stopColor="#A78BFA" />
+                    <stop offset="50%" stopColor="#F472B6" />
+                    <stop offset="100%" stopColor="#FB7185" />
+                  </linearGradient>
+                </defs>
+              </svg>
+            </div>
+
+            {/* String from kite to bottom */}
+            <svg className="absolute inset-0 w-full h-full pointer-events-none">
+              <line
+                x1={`${kitePosition}%`}
+                y1="calc(25% + 112px)"
+                x2="50%"
+                y2="100%"
+                stroke="#8B4513"
+                strokeWidth="2"
+                strokeDasharray="5,5"
+              />
+            </svg>
+
+            {/* Floating texts */}
+            {floatingTexts.map(ft => (
+              <div
+                key={ft.id}
+                className="absolute pointer-events-none font-bold text-lg"
+                style={{
+                  left: `${ft.x}%`,
+                  top: `${ft.y}%`,
+                  color: ft.color,
+                  animation: 'floatUp 1s ease-out forwards',
+                  transform: 'translateX(-50%)',
+                }}
+              >
+                {ft.text}
+              </div>
+            ))}
+          </div>
+
+          {/* Balance meter */}
+          <div className="px-4 py-3 bg-white/30">
+            <div className="text-center text-white text-sm mb-1">Equilibrio</div>
+            <div className="relative h-6 bg-white/40 rounded-full overflow-hidden">
+              {/* Danger zones */}
+              <div className="absolute left-0 top-0 bottom-0 w-[15%] bg-red-500/50" />
+              <div className="absolute right-0 top-0 bottom-0 w-[15%] bg-red-500/50" />
+              {/* Warning zones */}
+              <div className="absolute left-[15%] top-0 bottom-0 w-[10%] bg-yellow-500/30" />
+              <div className="absolute right-[15%] top-0 bottom-0 w-[10%] bg-yellow-500/30" />
+              {/* Safe zone */}
+              <div className="absolute left-[25%] right-[25%] top-0 bottom-0 bg-green-500/30" />
+              {/* Center marker */}
+              <div className="absolute left-1/2 top-0 bottom-0 w-1 bg-white/70 -translate-x-1/2" />
+              {/* Kite position indicator */}
+              <div
+                className={`absolute top-1/2 w-5 h-5 rounded-full -translate-y-1/2 -translate-x-1/2 transition-all border-2 border-white shadow-lg ${
+                  dangerLevel === 'danger' ? 'bg-red-500 animate-pulse' :
+                  dangerLevel === 'warning' ? 'bg-yellow-500' :
+                  'bg-green-500'
+                }`}
+                style={{ left: `${kitePosition}%` }}
+              >
+                <span className="absolute -top-5 left-1/2 -translate-x-1/2 text-xs">🪁</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Ground with Coco and Mango */}
+          <div className="h-24 bg-gradient-to-t from-green-600 to-green-500 relative">
+            {/* Grass texture */}
+            <div className="absolute inset-x-0 top-0 h-4 bg-green-700/30" style={{
+              clipPath: 'polygon(0% 100%, 5% 50%, 10% 100%, 15% 60%, 20% 100%, 25% 40%, 30% 100%, 35% 70%, 40% 100%, 45% 50%, 50% 100%, 55% 60%, 60% 100%, 65% 40%, 70% 100%, 75% 70%, 80% 100%, 85% 50%, 90% 100%, 95% 60%, 100% 100%)'
+            }} />
+
+            {/* Coco and Mango holding string */}
+            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-end gap-2">
+              <span className="text-4xl">🦎</span>
+              <span className="text-3xl">🦎</span>
+            </div>
+
+            {/* Control hint */}
+            <div className="absolute bottom-1 left-0 right-0 text-center text-white/70 text-xs">
+              Arrastra el papalote o toca los lados
+            </div>
+          </div>
+
+          {/* Side tap controls */}
+          <button
+            className="absolute left-0 top-1/3 bottom-1/3 w-16 bg-white/0 active:bg-white/20"
+            onClick={handleTapLeft}
+          >
+            <span className="text-3xl text-white/50">◀</span>
+          </button>
+          <button
+            className="absolute right-0 top-1/3 bottom-1/3 w-16 bg-white/0 active:bg-white/20"
+            onClick={handleTapRight}
+          >
+            <span className="text-3xl text-white/50">▶</span>
+          </button>
+
+          {/* CSS Animations */}
+          <style>{`
+            @keyframes floatUp {
+              0% { opacity: 1; transform: translateX(-50%) translateY(0); }
+              100% { opacity: 0; transform: translateX(-50%) translateY(-30px); }
+            }
+            @keyframes windLeaf {
+              0% { transform: translateX(0) rotate(0deg); opacity: 1; }
+              100% { transform: translateX(${windDirection === 1 ? '110vw' : '-110vw'}) rotate(720deg); opacity: 0; }
+            }
+            @keyframes birdFly {
+              0% { transform: translateY(0); }
+              50% { transform: translateY(-20px); }
+              100% { transform: translateY(0); }
+            }
+            @keyframes cloud1 {
+              0% { transform: translateX(0); }
+              100% { transform: translateX(120vw); }
+            }
+            @keyframes cloud2 {
+              0% { transform: translateX(0); }
+              100% { transform: translateX(120vw); }
+            }
+            @keyframes cloud3 {
+              0% { transform: translateX(0); }
+              100% { transform: translateX(120vw); }
+            }
+            .animate-cloud1 { animation: cloud1 30s linear infinite; }
+            .animate-cloud2 { animation: cloud2 40s linear infinite; animation-delay: 5s; }
+            .animate-cloud3 { animation: cloud3 35s linear infinite; animation-delay: 10s; }
+          `}</style>
+        </div>
+      );
+    };
+
+    // ==================== GAME 9: EL TESORO PERDIDO ====================
+    // Treasure map puzzle - follow clues to tap landmarks in order
+
+    const Game9Tesoro = ({ isPaused, onGameEnd }) => {
+      const [gameState, setGameState] = useState('intro'); // intro, showing_clue, selecting, round_complete, ended
+      const [score, setScore] = useState(0);
+      const [round, setRound] = useState(1);
+      const [currentStep, setCurrentStep] = useState(0);
+      const [mistakes, setMistakes] = useState(0);
+      const [visitedLandmarks, setVisitedLandmarks] = useState([]);
+      const [wrongTap, setWrongTap] = useState(null);
+      const [showTreasure, setShowTreasure] = useState(false);
+      const [floatingTexts, setFloatingTexts] = useState([]);
+      const floatIdRef = useRef(0);
+      const MAX_ROUNDS = 5;
+      const MAX_MISTAKES = 2;
+
+      // Landmark definitions
+      const landmarks = [
+        { id: 'tree', emoji: '🌳', name: 'El árbol grande' },
+        { id: 'rock', emoji: '🪨', name: 'La roca' },
+        { id: 'fountain', emoji: '⛲', name: 'La fuente' },
+        { id: 'bridge', emoji: '🌉', name: 'El puente' },
+        { id: 'house', emoji: '🏠', name: 'La casa vieja' },
+        { id: 'flower', emoji: '🌺', name: 'Las flores' },
+        { id: 'bench', emoji: '🪑', name: 'La banca' },
+        { id: 'statue', emoji: '🗿', name: 'La estatua' },
+      ];
+
+      // Fixed grid positions for landmarks (4x2 grid)
+      const gridPositions = [
+        { row: 0, col: 0 }, { row: 0, col: 1 }, { row: 0, col: 2 }, { row: 0, col: 3 },
+        { row: 1, col: 0 }, { row: 1, col: 1 }, { row: 1, col: 2 }, { row: 1, col: 3 },
+      ];
+
+      // Pre-defined treasure hunt sequences (landmark IDs in order)
+      const treasureHunts = [
+        // Round 1: 3 steps
+        ['tree', 'fountain', 'house'],
+        // Round 2: 3 steps
+        ['rock', 'bridge', 'flower'],
+        // Round 3: 4 steps
+        ['statue', 'tree', 'fountain', 'bench'],
+        // Round 4: 4 steps
+        ['flower', 'house', 'rock', 'bridge'],
+        // Round 5: 5 steps
+        ['bench', 'statue', 'tree', 'fountain', 'house'],
+      ];
+
+      // Spanish clues for each step
+      const getClueForStep = (landmarkId, stepIndex, isLast) => {
+        const landmark = landmarks.find(l => l.id === landmarkId);
+        if (!landmark) return '';
+
+        if (stepIndex === 0) {
+          return `Empieza en ${landmark.name.toLowerCase()}`;
+        } else if (isLast) {
+          return `¡El tesoro está cerca de ${landmark.name.toLowerCase()}!`;
+        } else {
+          const verbs = ['Camina hacia', 'Ve a', 'Sigue hasta', 'Busca'];
+          const verb = verbs[stepIndex % verbs.length];
+          return `${verb} ${landmark.name.toLowerCase()}`;
+        }
+      };
+
+      const currentHunt = treasureHunts[round - 1] || treasureHunts[0];
+      const currentTargetId = currentHunt[currentStep];
+      const currentClue = getClueForStep(currentTargetId, currentStep, currentStep === currentHunt.length - 1);
+
+      // Add floating text
+      const addFloatingText = (text, x, y, color = '#FFD700') => {
+        const id = floatIdRef.current++;
+        setFloatingTexts(prev => [...prev, { id, text, x, y, color }]);
+        setTimeout(() => {
+          setFloatingTexts(prev => prev.filter(f => f.id !== id));
+        }, 1000);
+      };
+
+      const startGame = () => {
+        setGameState('showing_clue');
+        setScore(0);
+        setRound(1);
+        setCurrentStep(0);
+        setMistakes(0);
+        setVisitedLandmarks([]);
+        setWrongTap(null);
+        setShowTreasure(false);
+        setFloatingTexts([]);
+      };
+
+      const startNextRound = () => {
+        setRound(r => r + 1);
+        setCurrentStep(0);
+        setMistakes(0);
+        setVisitedLandmarks([]);
+        setWrongTap(null);
+        setShowTreasure(false);
+        setGameState('showing_clue');
+      };
+
+      const handleLandmarkTap = (landmarkId) => {
+        if (gameState !== 'selecting' || isPaused) return;
+
+        const pos = gridPositions[landmarks.findIndex(l => l.id === landmarkId)];
+        const tapX = 15 + pos.col * 25;
+        const tapY = 35 + pos.row * 25;
+
+        if (landmarkId === currentTargetId) {
+          // Correct!
+          setScore(s => s + 5);
+          addFloatingText('+5', tapX, tapY, '#10B981');
+          setVisitedLandmarks(v => [...v, landmarkId]);
+
+          if (currentStep === currentHunt.length - 1) {
+            // Round complete - found treasure!
+            setShowTreasure(true);
+            const bonusPoints = mistakes === 0 ? 10 : 0;
+            setScore(s => s + 20 + bonusPoints);
+            addFloatingText(bonusPoints > 0 ? '+30 ¡Perfecto!' : '+20', tapX, tapY, '#FFD700');
+
+            setTimeout(() => {
+              if (round >= MAX_ROUNDS) {
+                setGameState('ended');
+              } else {
+                setGameState('round_complete');
+              }
+            }, 1500);
+          } else {
+            // Move to next step
+            setCurrentStep(s => s + 1);
+            setGameState('showing_clue');
+          }
+        } else {
+          // Wrong!
+          setWrongTap(landmarkId);
+          setMistakes(m => m + 1);
+          addFloatingText('✗', tapX, tapY, '#EF4444');
+
+          setTimeout(() => setWrongTap(null), 500);
+
+          if (mistakes + 1 >= MAX_MISTAKES) {
+            // Too many mistakes - end game
+            setTimeout(() => setGameState('ended'), 500);
+          }
+        }
+      };
+
+      // Auto-advance from showing_clue to selecting
+      useEffect(() => {
+        if (gameState === 'showing_clue' && !isPaused) {
+          const timer = setTimeout(() => {
+            setGameState('selecting');
+          }, 1500);
+          return () => clearTimeout(timer);
+        }
+      }, [gameState, isPaused, currentStep]);
+
+      const getStars = () => {
+        if (score >= 150) return 3;
+        if (score >= 100) return 2;
+        if (score >= 50) return 1;
+        return 0;
+      };
+
+      const getMessage = () => {
+        const stars = getStars();
+        if (stars >= 3) return '¡Increíble! ¡Eres un gran explorador!';
+        if (stars >= 2) return '¡Muy bien! ¡Encontraste el tesoro!';
+        if (stars >= 1) return '¡Buen intento! Sigue las pistas.';
+        return '¡Intenta de nuevo!';
+      };
+
+      // Intro screen
+      if (gameState === 'intro') {
+        return (
+          <GameIntroScreen
+            game={games[8]}
+            instructions="¡Sigue las pistas del mapa! Toca los lugares en el orden correcto para encontrar el tesoro."
+            onStart={startGame}
+          />
+        );
+      }
+
+      // End screen
+      if (gameState === 'ended') {
+        return (
+          <GameEndScreen
+            score={score}
+            stars={getStars()}
+            message={getMessage()}
+            onRestart={startGame}
+            onExit={onGameEnd}
+          />
+        );
+      }
+
+      // Round complete screen
+      if (gameState === 'round_complete') {
+        return (
+          <div className="absolute inset-0 bg-black/70 flex items-center justify-center z-50">
+            <div className="bg-amber-50 rounded-2xl p-6 text-center max-w-xs mx-4 border-4 border-amber-600">
+              <p className="text-5xl mb-3">🎉</p>
+              <p className="text-xl font-bold text-amber-800 mb-2">¡Tesoro encontrado!</p>
+              <p className="text-lg text-amber-700 mb-4">Ronda {round} de {MAX_ROUNDS} completada</p>
+              <p className="text-2xl font-bold text-amber-900 mb-4">{score} pts</p>
+              <button
+                onClick={startNextRound}
+                className="px-6 py-3 bg-amber-500 text-white rounded-full font-bold hover:bg-amber-600"
+              >
+                Siguiente ronda →
+              </button>
+            </div>
+          </div>
+        );
+      }
+
+      return (
+        <div className="h-full flex flex-col bg-amber-100 overflow-hidden select-none">
+          {/* HUD */}
+          <div className="p-3 flex justify-between items-center bg-amber-700 text-white">
+            <div className="flex items-center gap-3">
+              <span className="text-sm">Ronda {round}/{MAX_ROUNDS}</span>
+              <span className="text-sm">❌ {mistakes}/{MAX_MISTAKES}</span>
+            </div>
+            <div className="text-xl font-bold">
+              {score} pts
+            </div>
+          </div>
+
+          {/* Clue scroll */}
+          <div className="mx-4 mt-3 p-4 bg-amber-50 rounded-lg border-2 border-amber-600 shadow-lg relative">
+            <div className="absolute -top-2 left-1/2 -translate-x-1/2 bg-amber-600 text-white text-xs px-3 py-1 rounded-full">
+              Pista {currentStep + 1} de {currentHunt.length}
+            </div>
+            <p className="text-center text-lg font-bold text-amber-900 mt-1">
+              {gameState === 'showing_clue' ? '📜 ' : '👆 '}{currentClue}
+            </p>
+            {gameState === 'selecting' && (
+              <p className="text-center text-sm text-amber-600 mt-1">
+                ¡Toca el lugar correcto!
+              </p>
+            )}
+          </div>
+
+          {/* Map grid */}
+          <div className="flex-1 p-4 relative">
+            {/* Parchment background */}
+            <div className="absolute inset-4 bg-amber-200 rounded-xl border-4 border-amber-600 shadow-inner"
+              style={{
+                backgroundImage: `url("data:image/svg+xml,%3Csvg width='100' height='100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 0h100v100H0z' fill='%23D97706' fill-opacity='0.05'/%3E%3Cpath d='M50 0v100M0 50h100' stroke='%23D97706' stroke-opacity='0.1' stroke-width='0.5'/%3E%3C/svg%3E")`,
+              }}
+            />
+
+            {/* Path lines connecting visited landmarks */}
+            <svg className="absolute inset-4 w-[calc(100%-2rem)] h-[calc(100%-2rem)] pointer-events-none">
+              {visitedLandmarks.map((landmarkId, index) => {
+                if (index === 0) return null;
+                const prevId = visitedLandmarks[index - 1];
+                const prevLandmark = landmarks.findIndex(l => l.id === prevId);
+                const currLandmark = landmarks.findIndex(l => l.id === landmarkId);
+                const prevPos = gridPositions[prevLandmark];
+                const currPos = gridPositions[currLandmark];
+
+                const x1 = 12.5 + prevPos.col * 25;
+                const y1 = 25 + prevPos.row * 50;
+                const x2 = 12.5 + currPos.col * 25;
+                const y2 = 25 + currPos.row * 50;
+
+                return (
+                  <line
+                    key={`${prevId}-${landmarkId}`}
+                    x1={`${x1}%`} y1={`${y1}%`}
+                    x2={`${x2}%`} y2={`${y2}%`}
+                    stroke="#78350F"
+                    strokeWidth="3"
+                    strokeDasharray="8,4"
+                    strokeLinecap="round"
+                  />
+                );
+              })}
+            </svg>
+
+            {/* Landmarks grid */}
+            <div className="relative h-full grid grid-cols-4 grid-rows-2 gap-2 p-2">
+              {landmarks.map((landmark, index) => {
+                const isVisited = visitedLandmarks.includes(landmark.id);
+                const isTarget = landmark.id === currentTargetId && !isVisited;
+                const isWrong = landmark.id === wrongTap;
+
+                return (
+                  <button
+                    key={landmark.id}
+                    onClick={() => handleLandmarkTap(landmark.id)}
+                    disabled={isVisited || gameState !== 'selecting'}
+                    className={`
+                      relative flex flex-col items-center justify-center rounded-xl
+                      transition-all duration-200 border-2
+                      ${isVisited
+                        ? 'bg-green-200 border-green-500 opacity-60'
+                        : isWrong
+                        ? 'bg-red-200 border-red-500 animate-shake'
+                        : isTarget && gameState === 'selecting'
+                        ? 'bg-amber-50 border-amber-400 shadow-lg hover:scale-105 active:scale-95'
+                        : 'bg-amber-50/50 border-amber-300 hover:bg-amber-50'
+                      }
+                    `}
+                  >
+                    <span className={`text-3xl sm:text-4xl ${isVisited ? 'opacity-50' : ''}`}>
+                      {landmark.emoji}
+                    </span>
+                    <span className={`text-xs mt-1 text-amber-800 ${isVisited ? 'opacity-50' : ''}`}>
+                      {landmark.name.split(' ').pop()}
+                    </span>
+                    {isVisited && (
+                      <span className="absolute top-1 right-1 text-green-600 text-lg">✓</span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Treasure chest overlay */}
+            {showTreasure && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black/30 rounded-xl z-10">
+                <div className="text-center animate-bounce">
+                  <span className="text-7xl">💰</span>
+                  <p className="text-2xl font-bold text-amber-100 mt-2 drop-shadow-lg">¡Tesoro!</p>
+                </div>
+              </div>
+            )}
+
+            {/* Floating texts */}
+            {floatingTexts.map(ft => (
+              <div
+                key={ft.id}
+                className="absolute pointer-events-none font-bold text-xl z-20"
+                style={{
+                  left: `${ft.x}%`,
+                  top: `${ft.y}%`,
+                  color: ft.color,
+                  animation: 'floatUp 1s ease-out forwards',
+                  transform: 'translate(-50%, -50%)',
+                }}
+              >
+                {ft.text}
+              </div>
+            ))}
+          </div>
+
+          {/* Coco and Mango at bottom */}
+          <div className="h-16 bg-gradient-to-t from-amber-700 to-amber-600 relative flex items-center justify-center gap-4">
+            <span className="text-3xl">🦎</span>
+            <span className="text-sm text-amber-100">¡Busquemos el tesoro!</span>
+            <span className="text-2xl">🦎</span>
+          </div>
+
+          {/* CSS Animations */}
+          <style>{`
+            @keyframes floatUp {
+              0% { opacity: 1; transform: translate(-50%, -50%) translateY(0); }
+              100% { opacity: 0; transform: translate(-50%, -50%) translateY(-40px); }
+            }
+            @keyframes shake {
+              0%, 100% { transform: translateX(0); }
+              25% { transform: translateX(-5px); }
+              75% { transform: translateX(5px); }
+            }
+            .animate-shake {
+              animation: shake 0.3s ease-in-out;
+            }
+          `}</style>
+        </div>
+      );
+    };
+
+    // ==================== GAME 10: LA CARRERA DE BARQUITOS ====================
+    // Paper boat racing - tap to blow your boat forward, avoid obstacles!
+
+    const Game10Barquitos = ({ isPaused, onGameEnd }) => {
+      const [gameState, setGameState] = useState('intro'); // intro, countdown, racing, rescue, finished, ended
+      const [countdownNum, setCountdownNum] = useState(3);
+      const [distance, setDistance] = useState(0);
+      const [boatLane, setBoatLane] = useState(1); // 0=top, 1=middle, 2=bottom
+      const [obstacles, setObstacles] = useState([]);
+      const [elapsedTime, setElapsedTime] = useState(0);
+      const [tapPower, setTapPower] = useState(0);
+      const [score, setScore] = useState(0);
+      const [mangoRescue, setMangoRescue] = useState(null); // { countdown: 3 }
+      const [mangoRescued, setMangoRescued] = useState(0);
+      const [mangoMissed, setMangoMissed] = useState(0);
+      const [obstacleHits, setObstacleHits] = useState(0);
+      const [isStuck, setIsStuck] = useState(false);
+      const [floatingTexts, setFloatingTexts] = useState([]);
+      const [ripples, setRipples] = useState([]);
+      const gameRef = useRef(null);
+      const obstacleIdRef = useRef(0);
+      const floatIdRef = useRef(0);
+      const rippleIdRef = useRef(0);
+      const animationRef = useRef(null);
+      const lastTimeRef = useRef(0);
+      const touchStartY = useRef(null);
+      const FINISH_LINE = 100;
+
+      // Obstacle types
+      const obstacleTypes = [
+        { type: 'leaf', emoji: '🍂', effect: 'minor', speedPenalty: 0.3 },
+        { type: 'stick', emoji: '🪵', effect: 'slow', speedPenalty: 0.6 },
+        { type: 'rock', emoji: '🪨', effect: 'stop', speedPenalty: 1 },
+        { type: 'boost', emoji: '💨', effect: 'boost', speedPenalty: -0.5 },
+      ];
+
+      // Add floating text
+      const addFloatingText = (text, x, y, color = '#FFD700') => {
+        const id = floatIdRef.current++;
+        setFloatingTexts(prev => [...prev, { id, text, x, y, color }]);
+        setTimeout(() => {
+          setFloatingTexts(prev => prev.filter(f => f.id !== id));
+        }, 1000);
+      };
+
+      // Add ripple effect
+      const addRipple = (x, y) => {
+        const id = rippleIdRef.current++;
+        setRipples(prev => [...prev, { id, x, y }]);
+        setTimeout(() => {
+          setRipples(prev => prev.filter(r => r.id !== id));
+        }, 600);
+      };
+
+      // Start game
+      const startGame = () => {
+        setGameState('countdown');
+        setCountdownNum(3);
+        setDistance(0);
+        setBoatLane(1);
+        setObstacles([]);
+        setElapsedTime(0);
+        setTapPower(0);
+        setScore(0);
+        setMangoRescue(null);
+        setMangoRescued(0);
+        setMangoMissed(0);
+        setObstacleHits(0);
+        setIsStuck(false);
+        setFloatingTexts([]);
+        setRipples([]);
+      };
+
+      // Countdown effect
+      useEffect(() => {
+        if (gameState !== 'countdown' || isPaused) return;
+
+        if (countdownNum > 0) {
+          const timer = setTimeout(() => {
+            setCountdownNum(n => n - 1);
+          }, 1000);
+          return () => clearTimeout(timer);
+        } else {
+          setGameState('racing');
+          lastTimeRef.current = Date.now();
+        }
+      }, [gameState, countdownNum, isPaused]);
+
+      // Main game loop
+      useEffect(() => {
+        if (gameState !== 'racing' || isPaused || isStuck) return;
+
+        const gameLoop = () => {
+          const now = Date.now();
+          const delta = (now - lastTimeRef.current) / 1000;
+          lastTimeRef.current = now;
+
+          // Update elapsed time
+          setElapsedTime(t => t + delta);
+
+          // Decay tap power
+          setTapPower(p => Math.max(0, p - delta * 0.8));
+
+          // Calculate speed (base + tap bonus)
+          const baseSpeed = 3;
+          const tapBonus = tapPower * 4;
+          const speed = baseSpeed + tapBonus;
+
+          // Update distance
+          setDistance(d => {
+            const newD = Math.min(FINISH_LINE, d + speed * delta);
+            if (newD >= FINISH_LINE) {
+              setGameState('finished');
+            }
+            return newD;
+          });
+
+          // Update obstacles position
+          setObstacles(obs => obs.map(o => ({
+            ...o,
+            x: o.x - speed * delta * 3
+          })).filter(o => o.x > -20));
+
+          animationRef.current = requestAnimationFrame(gameLoop);
+        };
+
+        animationRef.current = requestAnimationFrame(gameLoop);
+        return () => {
+          if (animationRef.current) {
+            cancelAnimationFrame(animationRef.current);
+          }
+        };
+      }, [gameState, isPaused, isStuck, tapPower]);
+
+      // Spawn obstacles
+      useEffect(() => {
+        if (gameState !== 'racing' || isPaused) return;
+
+        const spawnObstacle = () => {
+          const types = obstacleTypes.filter(t => t.type !== 'boost' || Math.random() < 0.3);
+          const typeData = types[Math.floor(Math.random() * types.length)];
+          const lane = Math.floor(Math.random() * 3);
+
+          const newObstacle = {
+            id: obstacleIdRef.current++,
+            ...typeData,
+            x: 110,
+            lane,
+          };
+
+          setObstacles(prev => [...prev, newObstacle]);
+        };
+
+        const interval = setInterval(spawnObstacle, 1200);
+        return () => clearInterval(interval);
+      }, [gameState, isPaused]);
+
+      // Mango rescue event
+      useEffect(() => {
+        if (gameState !== 'racing' || isPaused || mangoRescue) return;
+
+        // Trigger rescue at random intervals
+        const checkRescue = setInterval(() => {
+          if (distance > 20 && distance < 85 && Math.random() < 0.15) {
+            setMangoRescue({ countdown: 3 });
+            setGameState('rescue');
+          }
+        }, 2000);
+
+        return () => clearInterval(checkRescue);
+      }, [gameState, isPaused, mangoRescue, distance]);
+
+      // Rescue countdown
+      useEffect(() => {
+        if (gameState !== 'rescue' || isPaused) return;
+
+        if (mangoRescue && mangoRescue.countdown > 0) {
+          const timer = setTimeout(() => {
+            setMangoRescue(r => ({ ...r, countdown: r.countdown - 1 }));
+          }, 1000);
+          return () => clearTimeout(timer);
+        } else if (mangoRescue && mangoRescue.countdown <= 0) {
+          // Missed rescue!
+          setMangoMissed(m => m + 1);
+          addFloatingText('-10', 50, 50, '#EF4444');
+          setMangoRescue(null);
+          setGameState('racing');
+          lastTimeRef.current = Date.now();
+        }
+      }, [gameState, isPaused, mangoRescue]);
+
+      // Check collisions
+      useEffect(() => {
+        if (gameState !== 'racing' || isPaused) return;
+
+        const boatX = 15;
+        const checkCollision = obstacles.find(o =>
+          o.x > boatX - 8 &&
+          o.x < boatX + 12 &&
+          o.lane === boatLane
+        );
+
+        if (checkCollision) {
+          setObstacles(obs => obs.filter(o => o.id !== checkCollision.id));
+
+          if (checkCollision.effect === 'boost') {
+            setTapPower(p => Math.min(2, p + 0.5));
+            addFloatingText('¡Impulso!', 25, 50, '#10B981');
+          } else if (checkCollision.effect === 'stop') {
+            setIsStuck(true);
+            setObstacleHits(h => h + 1);
+            addFloatingText('¡Roca!', 25, 50, '#EF4444');
+            setTimeout(() => {
+              setIsStuck(false);
+              lastTimeRef.current = Date.now();
+            }, 1000);
+          } else {
+            setObstacleHits(h => h + 1);
+            const penalty = checkCollision.effect === 'minor' ? '-2' : '-5';
+            addFloatingText(penalty, 25, 50, '#F59E0B');
+          }
+        }
+      }, [obstacles, boatLane, gameState, isPaused]);
+
+      // Handle finish
+      useEffect(() => {
+        if (gameState !== 'finished') return;
+
+        // Calculate final score
+        const timeScore = Math.max(0, Math.round(90 - elapsedTime));
+        const hitPenalty = obstacleHits * 5;
+        const rescueBonus = mangoRescued * 15;
+        const missedPenalty = mangoMissed * 10;
+        const finalScore = Math.max(0, timeScore - hitPenalty + rescueBonus - missedPenalty);
+
+        setScore(finalScore);
+
+        setTimeout(() => {
+          setGameState('ended');
+        }, 1500);
+      }, [gameState, elapsedTime, obstacleHits, mangoRescued, mangoMissed]);
+
+      // Handle tap for propulsion
+      const handleTap = (e) => {
+        if (gameState === 'rescue') {
+          // Rescue Mango!
+          setMangoRescued(r => r + 1);
+          addFloatingText('+15 ¡Rescatado!', 50, 50, '#10B981');
+          setMangoRescue(null);
+          setGameState('racing');
+          lastTimeRef.current = Date.now();
+          return;
+        }
+
+        if (gameState !== 'racing' || isPaused || isStuck) return;
+
+        // Add tap power
+        setTapPower(p => Math.min(2, p + 0.3));
+
+        // Add ripple at boat position
+        addRipple(18, 30 + boatLane * 25);
+      };
+
+      // Handle swipe/drag for steering
+      const handleTouchStart = (e) => {
+        touchStartY.current = e.touches[0].clientY;
+      };
+
+      const handleTouchMove = (e) => {
+        if (!touchStartY.current || gameState !== 'racing' || isPaused) return;
+
+        const deltaY = e.touches[0].clientY - touchStartY.current;
+        if (Math.abs(deltaY) > 30) {
+          if (deltaY > 0 && boatLane < 2) {
+            setBoatLane(l => l + 1);
+            touchStartY.current = e.touches[0].clientY;
+          } else if (deltaY < 0 && boatLane > 0) {
+            setBoatLane(l => l - 1);
+            touchStartY.current = e.touches[0].clientY;
+          }
+        }
+      };
+
+      const handleTouchEnd = () => {
+        touchStartY.current = null;
+      };
+
+      // Keyboard controls (for desktop)
+      useEffect(() => {
+        const handleKeyDown = (e) => {
+          if (gameState === 'rescue' && e.code === 'Space') {
+            handleTap(e);
+            return;
+          }
+          if (gameState !== 'racing' || isPaused) return;
+
+          if (e.code === 'ArrowUp' && boatLane > 0) {
+            setBoatLane(l => l - 1);
+          } else if (e.code === 'ArrowDown' && boatLane < 2) {
+            setBoatLane(l => l + 1);
+          } else if (e.code === 'Space') {
+            setTapPower(p => Math.min(2, p + 0.3));
+            addRipple(18, 30 + boatLane * 25);
+          }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+      }, [gameState, isPaused, boatLane]);
+
+      const getStars = () => {
+        if (score >= 70) return 3;
+        if (score >= 50) return 2;
+        if (score >= 30) return 1;
+        return 0;
+      };
+
+      const getMessage = () => {
+        const stars = getStars();
+        if (stars >= 3) return '¡Increíble! ¡Eres el capitán más rápido!';
+        if (stars >= 2) return '¡Muy bien! ¡Gran carrera!';
+        if (stars >= 1) return '¡Buen intento! ¡Sigue soplando!';
+        return '¡Intenta de nuevo!';
+      };
+
+      // Intro screen
+      if (gameState === 'intro') {
+        return (
+          <GameIntroScreen
+            game={games[9]}
+            instructions="¡Sopla tu barquito! Toca rápido para avanzar. Desliza arriba/abajo para esquivar. ¡Rescata a Mango si se cae!"
+            onStart={startGame}
+          />
+        );
+      }
+
+      // End screen
+      if (gameState === 'ended') {
+        return (
+          <GameEndScreen
+            score={score}
+            stars={getStars()}
+            message={getMessage()}
+            onRestart={startGame}
+            onExit={onGameEnd}
+          />
+        );
+      }
+
+      // Countdown screen
+      if (gameState === 'countdown') {
+        return (
+          <div className="h-full flex items-center justify-center bg-gradient-to-b from-blue-400 to-blue-600">
+            <div className="text-center">
+              <p className="text-9xl font-bold text-white animate-pulse drop-shadow-lg">
+                {countdownNum > 0 ? countdownNum : '¡YA!'}
+              </p>
+            </div>
+          </div>
+        );
+      }
+
+      // Rescue event overlay
+      const RescueOverlay = () => (
+        <div className="absolute inset-0 bg-red-500/80 flex flex-col items-center justify-center z-40">
+          <p className="text-5xl mb-4">🆘</p>
+          <p className="text-2xl font-bold text-white mb-2">¡Mango se cayó al agua!</p>
+          <p className="text-6xl font-bold text-white mb-4">{mangoRescue?.countdown}</p>
+          <button
+            onClick={handleTap}
+            className="px-8 py-4 bg-yellow-400 text-yellow-900 rounded-full text-2xl font-bold animate-pulse shadow-lg"
+          >
+            🦎 ¡RESCATAR!
+          </button>
+        </div>
+      );
+
+      // Boat SVG
+      const PaperBoat = ({ lane, stuck }) => (
+        <div
+          className={`absolute left-[10%] transition-all duration-200 ${stuck ? 'animate-shake' : ''}`}
+          style={{ top: `${20 + lane * 25}%` }}
+        >
+          <svg viewBox="0 0 80 50" className="w-20 h-12">
+            {/* Paper boat */}
+            <path d="M 5 35 L 20 15 L 40 10 L 60 15 L 75 35 L 40 40 Z" fill="#F5F5F5" stroke="#DDD" strokeWidth="1" />
+            <path d="M 40 10 L 40 35" stroke="#DDD" strokeWidth="1" />
+            <path d="M 20 15 L 40 35 L 60 15" fill="none" stroke="#DDD" strokeWidth="0.5" />
+            {/* Coco on boat */}
+            <g transform="translate(30, 5)">
+              <ellipse cx="10" cy="12" rx="8" ry="6" fill="#6B8E23" />
+              <circle cx="7" cy="10" r="1.5" fill="white" />
+              <circle cx="13" cy="10" r="1.5" fill="white" />
+              <circle cx="7" cy="10" r="0.8" fill="#222" />
+              <circle cx="13" cy="10" r="0.8" fill="#222" />
+            </g>
+            {/* Blow effect */}
+            {tapPower > 0.3 && (
+              <>
+                <path d="M 78 30 Q 85 25 90 30" fill="none" stroke="#87CEEB" strokeWidth="2" opacity={tapPower / 2} />
+                <path d="M 80 35 Q 88 30 95 35" fill="none" stroke="#87CEEB" strokeWidth="1.5" opacity={tapPower / 2} />
+              </>
+            )}
+          </svg>
+        </div>
+      );
+
+      // Mango's boat (NPC)
+      const MangoBoat = () => (
+        <div
+          className="absolute left-[3%] opacity-60"
+          style={{ top: '60%' }}
+        >
+          <svg viewBox="0 0 60 40" className="w-14 h-10">
+            <path d="M 5 28 L 15 12 L 30 8 L 45 12 L 55 28 L 30 32 Z" fill="#FFE4B5" stroke="#DDD" strokeWidth="1" />
+            <g transform="translate(20, 2)">
+              <ellipse cx="10" cy="10" rx="7" ry="5" fill="#FFA500" />
+              <circle cx="7" cy="8" r="1.2" fill="white" />
+              <circle cx="13" cy="8" r="1.2" fill="white" />
+              <circle cx="7" cy="8" r="0.6" fill="#222" />
+              <circle cx="13" cy="8" r="0.6" fill="#222" />
+            </g>
+          </svg>
+        </div>
+      );
+
+      return (
+        <div
+          ref={gameRef}
+          className="h-full flex flex-col bg-blue-400 overflow-hidden select-none"
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+          onClick={handleTap}
+        >
+          {/* HUD */}
+          <div className="p-3 flex justify-between items-center bg-blue-700 text-white z-10">
+            <div className="flex items-center gap-3">
+              <span className="text-sm">⏱️ {elapsedTime.toFixed(1)}s</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-32 h-4 bg-blue-900 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-yellow-400 transition-all duration-100"
+                  style={{ width: `${distance}%` }}
+                />
+              </div>
+              <span className="text-xs">{Math.round(distance)}m</span>
+            </div>
+            <div className="text-xs">
+              🦎 {mangoRescued}
+            </div>
+          </div>
+
+          {/* Power meter */}
+          <div className="absolute top-16 left-3 w-6 h-24 bg-blue-900/50 rounded-full overflow-hidden z-10">
+            <div
+              className="absolute bottom-0 w-full bg-yellow-400 transition-all duration-100"
+              style={{ height: `${(tapPower / 2) * 100}%` }}
+            />
+            <span className="absolute top-1 left-1/2 -translate-x-1/2 text-xs">💨</span>
+          </div>
+
+          {/* Water area */}
+          <div className="flex-1 relative overflow-hidden">
+            {/* Animated water background */}
+            <div className="absolute inset-0 bg-gradient-to-b from-blue-400 via-blue-500 to-blue-600">
+              {/* Water wave lines */}
+              {[...Array(8)].map((_, i) => (
+                <div
+                  key={i}
+                  className="absolute w-full h-2 bg-blue-300/30"
+                  style={{
+                    top: `${10 + i * 12}%`,
+                    animation: `wave ${2 + i * 0.2}s ease-in-out infinite`,
+                    animationDelay: `${i * 0.1}s`,
+                  }}
+                />
+              ))}
+            </div>
+
+            {/* Lane indicators */}
+            {[0, 1, 2].map(lane => (
+              <div
+                key={lane}
+                className={`absolute left-0 right-0 h-[25%] border-b border-blue-300/20 transition-colors duration-200 ${
+                  boatLane === lane ? 'bg-blue-300/20' : ''
+                }`}
+                style={{ top: `${12.5 + lane * 25}%` }}
+              />
+            ))}
+
+            {/* Ripples */}
+            {ripples.map(ripple => (
+              <div
+                key={ripple.id}
+                className="absolute w-8 h-8 border-2 border-white/50 rounded-full"
+                style={{
+                  left: `${ripple.x}%`,
+                  top: `${ripple.y}%`,
+                  transform: 'translate(-50%, -50%)',
+                  animation: 'ripple 0.6s ease-out forwards',
+                }}
+              />
+            ))}
+
+            {/* Obstacles */}
+            {obstacles.map(obs => (
+              <div
+                key={obs.id}
+                className="absolute text-3xl transition-transform duration-100"
+                style={{
+                  left: `${obs.x}%`,
+                  top: `${20 + obs.lane * 25}%`,
+                  transform: 'translate(-50%, -50%)',
+                }}
+              >
+                {obs.emoji}
+              </div>
+            ))}
+
+            {/* Coco's boat */}
+            <PaperBoat lane={boatLane} stuck={isStuck} />
+
+            {/* Mango's boat (NPC) */}
+            <MangoBoat />
+
+            {/* Finish line */}
+            {distance > 80 && (
+              <div
+                className="absolute top-0 bottom-0 w-4 bg-gradient-to-r from-transparent via-white to-transparent"
+                style={{ left: `${95 - (distance - 80) * 2}%` }}
+              >
+                <div className="absolute inset-y-0 w-1 bg-white/50" style={{ left: '50%' }} />
+                <span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-2xl">🏁</span>
+              </div>
+            )}
+
+            {/* Floating texts */}
+            {floatingTexts.map(ft => (
+              <div
+                key={ft.id}
+                className="absolute pointer-events-none font-bold text-xl z-20"
+                style={{
+                  left: `${ft.x}%`,
+                  top: `${ft.y}%`,
+                  color: ft.color,
+                  animation: 'floatUp 1s ease-out forwards',
+                  transform: 'translate(-50%, -50%)',
+                }}
+              >
+                {ft.text}
+              </div>
+            ))}
+          </div>
+
+          {/* Tap zone indicator */}
+          <div className="h-20 bg-gradient-to-t from-blue-700 to-blue-600 flex items-center justify-center relative">
+            <div className="text-center text-white">
+              <p className="text-lg font-bold opacity-80">👆 Toca para soplar</p>
+              <p className="text-xs opacity-60">⬆️⬇️ Desliza para esquivar</p>
+            </div>
+          </div>
+
+          {/* Rescue overlay */}
+          {gameState === 'rescue' && <RescueOverlay />}
+
+          {/* Finished overlay */}
+          {gameState === 'finished' && (
+            <div className="absolute inset-0 bg-green-500/80 flex items-center justify-center z-40">
+              <div className="text-center">
+                <p className="text-6xl mb-4">🏆</p>
+                <p className="text-3xl font-bold text-white">¡META!</p>
+                <p className="text-xl text-white mt-2">Tiempo: {elapsedTime.toFixed(1)}s</p>
+              </div>
+            </div>
+          )}
+
+          {/* Stuck overlay */}
+          {isStuck && (
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-30">
+              <div className="text-center bg-red-500/80 px-6 py-3 rounded-xl">
+                <p className="text-xl font-bold text-white">¡Atorado!</p>
+              </div>
+            </div>
+          )}
+
+          {/* CSS Animations */}
+          <style>{`
+            @keyframes floatUp {
+              0% { opacity: 1; transform: translate(-50%, -50%) translateY(0); }
+              100% { opacity: 0; transform: translate(-50%, -50%) translateY(-40px); }
+            }
+            @keyframes wave {
+              0%, 100% { transform: translateX(-5%); }
+              50% { transform: translateX(5%); }
+            }
+            @keyframes ripple {
+              0% { transform: translate(-50%, -50%) scale(0.5); opacity: 1; }
+              100% { transform: translate(-50%, -50%) scale(2); opacity: 0; }
+            }
+            @keyframes shake {
+              0%, 100% { transform: translateX(0); }
+              25% { transform: translateX(-5px); }
+              75% { transform: translateX(5px); }
+            }
+            .animate-shake {
+              animation: shake 0.3s ease-in-out infinite;
+            }
+          `}</style>
+        </div>
+      );
+    };
+
     // ==================== PLACEHOLDER FOR OTHER GAMES ====================
 
     const ComingSoonGame = ({ game, onClose }) => (
@@ -3452,7 +5467,7 @@
     // ==================== GAME CARD ====================
 
     // Track which games are implemented
-    const availableGames = [1, 2, 3, 4, 5, 6]; // Game 1, Game 2, Game 3, Game 4, Game 5, and Game 6 are available
+    const availableGames = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]; // Games 1-10 are available
 
     const GameCard = ({ game, progress, onPlay }) => {
       const imgNum = String(game.id).padStart(2, '0');
@@ -3586,7 +5601,37 @@
           );
         }
 
-        // INSERT NEW GAME ROUTES HERE (games 2, 4, etc.)
+        if (currentGame === 7) {
+          return (
+            <GameWrapper game={game} onClose={() => setCurrentGame(null)}>
+              <Game7Alcantarilla onGameEnd={() => handleGameEnd(7)} />
+            </GameWrapper>
+          );
+        }
+
+        if (currentGame === 8) {
+          return (
+            <GameWrapper game={game} onClose={() => setCurrentGame(null)}>
+              <Game8Papalote onGameEnd={() => handleGameEnd(8)} />
+            </GameWrapper>
+          );
+        }
+
+        if (currentGame === 9) {
+          return (
+            <GameWrapper game={game} onClose={() => setCurrentGame(null)}>
+              <Game9Tesoro onGameEnd={() => handleGameEnd(9)} />
+            </GameWrapper>
+          );
+        }
+
+        if (currentGame === 10) {
+          return (
+            <GameWrapper game={game} onClose={() => setCurrentGame(null)}>
+              <Game10Barquitos onGameEnd={() => handleGameEnd(10)} />
+            </GameWrapper>
+          );
+        }
 
         // Other games show coming soon
         return (

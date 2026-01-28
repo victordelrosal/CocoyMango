@@ -1,0 +1,79 @@
+{
+  "project": "Coco y Mango Games - Batch 2",
+  "description": "Implement games 7-10 for the Coco y Mango mini-games platform",
+  "stories": [
+    {
+      "id": "7",
+      "title": "Game 7: La alcantarilla (Maze)",
+      "acceptance_criteria": [
+        "Game7Alcantarilla component exists in juegos.html",
+        "Maze navigation with fog-of-war (limited visibility around Coco)",
+        "Flashlight toggle with limited battery (15 seconds max)",
+        "5 coins to collect scattered in maze",
+        "Battery pickup items restore flashlight time",
+        "60-90 second time limit to find all coins and exit",
+        "GameIntroScreen shows instructions in Spanish",
+        "GameEndScreen shows score and 1-3 stars",
+        "Game route added: if (currentGame === 7)",
+        "7 added to availableGames array"
+      ],
+      "passes": true
+    },
+    {
+      "id": "8",
+      "title": "Game 8: El papalote (Balance)",
+      "acceptance_criteria": [
+        "Game8Papalote component exists in juegos.html",
+        "Kite balance mechanic - kite drifts left/right based on wind",
+        "Player drags or taps sides to counter wind drift",
+        "Wind direction changes every 3-8 seconds randomly",
+        "Balance meter shows kite position (center = safe, edges = danger)",
+        "3 lives - lose life when kite hits edge",
+        "60 second duration",
+        "Bird helpers occasionally nudge kite back to center",
+        "GameIntroScreen shows instructions in Spanish",
+        "GameEndScreen shows score and 1-3 stars",
+        "Game route added: if (currentGame === 8)",
+        "8 added to availableGames array"
+      ],
+      "passes": true
+    },
+    {
+      "id": "9",
+      "title": "Game 9: El tesoro perdido (Puzzle)",
+      "acceptance_criteria": [
+        "Game9Tesoro component exists in juegos.html",
+        "Map grid with 8 landmark emojis (tree, rock, fountain, bridge, house, flower, bench, statue)",
+        "Spanish clues tell player which landmarks to tap in order",
+        "5 rounds of treasure hunts with increasing difficulty (3-5 steps per round)",
+        "Visual path line shows progress through landmarks",
+        "Wrong tap = lose attempt (2 mistakes allowed per round)",
+        "Treasure chest appears at final destination",
+        "GameIntroScreen shows instructions in Spanish",
+        "GameEndScreen shows score and 1-3 stars",
+        "Game route added: if (currentGame === 9)",
+        "9 added to availableGames array"
+      ],
+      "passes": true
+    },
+    {
+      "id": "10",
+      "title": "Game 10: La carrera de barquitos (Racing)",
+      "acceptance_criteria": [
+        "Game10Barquitos component exists in juegos.html",
+        "Paper boat racing - tap repeatedly to blow boat forward",
+        "Swipe up/down to steer and avoid obstacles",
+        "Obstacles: sticks (slow), leaves (minor slow), rocks (full stop)",
+        "Distance meter shows progress to 100m finish line",
+        "Mango rescue event: he falls in water, tap rescue button within 3 seconds",
+        "Water animation with ripples",
+        "3-2-1-Go countdown at start",
+        "GameIntroScreen shows instructions in Spanish",
+        "GameEndScreen shows time and 1-3 stars",
+        "Game route added: if (currentGame === 10)",
+        "10 added to availableGames array"
+      ],
+      "passes": true
+    }
+  ]
+}

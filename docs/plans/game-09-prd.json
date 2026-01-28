@@ -1,0 +1,96 @@
+{
+  "prd_version": "1.0",
+  "game": {
+    "id": 9,
+    "title": "El tesoro perdido",
+    "component_name": "Game9Tesoro",
+    "type": "Puzzle",
+    "story_connection": "Coco and Mango found an old treasure map - follow the clues to find the treasure!"
+  },
+  "target_file": "juegos.html",
+  "shared_components": [
+    "GameWrapper",
+    "GameIntroScreen",
+    "GameEndScreen",
+    "StarRating"
+  ],
+  "mechanics": {
+    "core_loop": "Read map clues and tap landmarks in the correct order to find the treasure",
+    "controls": {
+      "tap": "Tap on landmarks to select them as next step"
+    },
+    "map": {
+      "landmarks": [
+        { "id": "tree", "emoji": "🌳", "name": "El árbol grande" },
+        { "id": "rock", "emoji": "🪨", "name": "La roca" },
+        { "id": "fountain", "emoji": "⛲", "name": "La fuente" },
+        { "id": "bridge", "emoji": "🌉", "name": "El puente" },
+        { "id": "house", "emoji": "🏠", "name": "La casa vieja" },
+        { "id": "flower", "emoji": "🌺", "name": "Las flores" },
+        { "id": "bench", "emoji": "🪑", "name": "La banca" },
+        { "id": "statue", "emoji": "🗿", "name": "La estatua" }
+      ],
+      "grid_size": "4x4 or 5x4 grid of locations"
+    },
+    "clues": {
+      "format": "Spanish directional clues",
+      "examples": [
+        "Empieza en el árbol grande",
+        "Camina hacia la fuente",
+        "Gira a la derecha hasta la roca",
+        "El tesoro está cerca de las flores"
+      ]
+    },
+    "rounds": 5,
+    "clues_per_round": "3-5 steps, increasing with rounds",
+    "mistakes_allowed": 2
+  },
+  "states": {
+    "intro": "Show GameIntroScreen with instructions",
+    "showing_clue": "Display current clue text",
+    "selecting": "Player taps landmarks in order",
+    "correct": "Right landmark, show next clue",
+    "wrong": "Wrong landmark, lose attempt",
+    "round_complete": "Found treasure for this round",
+    "ended": "Show GameEndScreen"
+  },
+  "scoring": {
+    "points_per_correct_step": 5,
+    "points_per_round_complete": 20,
+    "bonus_no_mistakes": 10,
+    "star_thresholds": {
+      "1_star": 50,
+      "2_stars": 100,
+      "3_stars": 150
+    }
+  },
+  "visuals": {
+    "background": "Old parchment/map style with landmarks scattered",
+    "landmarks": "Emoji icons on map grid, glow when tappable",
+    "path": "Dotted line showing progress through clues",
+    "treasure": "Chest emoji appears at final destination",
+    "clue_display": "Scroll or speech bubble with current clue"
+  },
+  "audio": {
+    "required": false,
+    "optional": [
+      { "event": "correct", "description": "Positive chime" },
+      { "event": "wrong", "description": "Wrong buzzer" },
+      { "event": "treasure", "description": "Treasure found fanfare" }
+    ]
+  },
+  "instructions_text": "¡Sigue las pistas del mapa! Toca los lugares en el orden correcto para encontrar el tesoro.",
+  "implementation_notes": [
+    "Pre-define 5-10 treasure hunt sequences",
+    "Each sequence is array of landmark IDs in order",
+    "Clues generated based on sequence (directional language)",
+    "Highlight current clue, dim completed steps",
+    "Show path line connecting visited landmarks",
+    "Wrong tap = flash red, lose attempt, can retry step",
+    "Good for teaching Spanish direction words"
+  ],
+  "after_implementation": {
+    "update_available_games": "Add 9 to availableGames array",
+    "add_game_route": "Add if (currentGame === 9) route in GamesApp"
+  }
+}
