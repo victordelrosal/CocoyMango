@@ -305,8 +305,8 @@
             {/* Straw */}
             <rect x="26" y="10" width="2.5" height="14" rx="1" fill="#FF6B6B" />
             {/* Label */}
-            <text x="48" y="19" textAnchor="middle" fontSize="8" fontWeight="bold" fill="#5D4037">Agua</text>
-            <text x="48" y="29" textAnchor="middle" fontSize="8" fontWeight="bold" fill="#5D4037">de Coco</text>
+            <text x="48" y="19" textAnchor="middle" fontSize="10" fontWeight="bold" fill="#5D4037">Agua</text>
+            <text x="48" y="30" textAnchor="middle" fontSize="10" fontWeight="bold" fill="#5D4037">de Coco</text>
           </svg>
         );
       }
@@ -325,8 +325,8 @@
           {/* Straw */}
           <rect x="19" y="5" width="2.5" height="12" rx="1" fill="#4CAF50" />
           {/* Label */}
-          <text x="52" y="19" textAnchor="middle" fontSize="8" fontWeight="bold" fill="#E65100">Agua</text>
-          <text x="52" y="29" textAnchor="middle" fontSize="8" fontWeight="bold" fill="#E65100">de Mango</text>
+          <text x="52" y="19" textAnchor="middle" fontSize="10" fontWeight="bold" fill="#E65100">Agua</text>
+          <text x="52" y="30" textAnchor="middle" fontSize="10" fontWeight="bold" fill="#E65100">de Mango</text>
         </svg>
       );
     };
@@ -357,7 +357,7 @@
             {/* Sparkle */}
             <text x="60" y="25" fontSize="10">✨</text>
             {/* Label */}
-            <text x="40" y="90" textAnchor="middle" fontSize="11" fontWeight="bold" fill="#5D4037">Agua de Coco</text>
+            <text x="40" y="90" textAnchor="middle" fontSize="13" fontWeight="bold" fill="#5D4037">Agua de Coco</text>
           </svg>
         );
       }
@@ -384,7 +384,7 @@
           {/* Sparkle */}
           <text x="62" y="12" fontSize="10">✨</text>
           {/* Label */}
-          <text x="40" y="95" textAnchor="middle" fontSize="11" fontWeight="bold" fill="#E65100">Agua de Mango</text>
+          <text x="40" y="95" textAnchor="middle" fontSize="13" fontWeight="bold" fill="#E65100">Agua de Mango</text>
         </svg>
       );
     };
@@ -632,13 +632,13 @@
             </div>
             <div className="flex items-center gap-3">
               {combo >= 3 && (
-                <span className="text-sm font-bold text-orange-600 animate-pulse">
+                <span className="text-base font-bold text-orange-600 animate-pulse">
                   COMBO x{combo}!
                 </span>
               )}
-              <span className="text-xl font-bold">⭐ {score}</span>
+              <span className="text-2xl font-bold">⭐ {score}</span>
             </div>
-            <div className={`text-xl font-bold ${timeLeft <= 10 ? 'text-red-500 animate-pulse' : ''}`}>
+            <div className={`text-2xl font-bold ${timeLeft <= 10 ? 'text-red-500 animate-pulse' : ''}`}>
               ⏱️ {timeLeft}s
             </div>
           </div>
@@ -667,7 +667,7 @@
 
             {/* Waiting customers */}
             <div className="bg-white/40 backdrop-blur-sm rounded-2xl p-3 shadow-inner flex-1 flex flex-col">
-              <p className="text-center text-sm mb-2 font-bold text-amber-800">
+              <p className="text-center text-base mb-2 font-bold text-amber-800">
                 Clientes esperando: {customers.length}
               </p>
               <div className="flex-1 flex flex-wrap justify-center items-start gap-2 content-start overflow-hidden">
@@ -688,15 +688,15 @@
                       }}
                     >
                       {/* Drink thought bubble */}
-                      <div className="w-full h-10 sm:h-12 -mb-1">
+                      <div className="w-full h-12 sm:h-14 -mb-1">
                         <DrinkBubble type={customer.type} />
                       </div>
                       {/* Lizard face */}
-                      <div className="w-full h-14 sm:h-18">
+                      <div className="w-full h-16 sm:h-20">
                         <LizardCustomer type={customer.type} patience={customer.patience} status="waiting" />
                       </div>
                       {/* Name */}
-                      <p className="text-xs font-bold truncate">{customer.name}</p>
+                      <p className="text-sm font-bold truncate">{customer.name}</p>
                       {/* Patience bar */}
                       <div className="w-full bg-gray-200 rounded-full h-2.5 mt-0.5">
                         <div
@@ -713,21 +713,21 @@
 
           {/* Drink serving buttons */}
           <div className="p-4 bg-gradient-to-t from-amber-300/80 to-transparent backdrop-blur-sm">
-            <p className="text-center mb-2 font-bold text-amber-900 text-sm">¡Toca para servir!</p>
-            <div className="flex gap-4 justify-center">
+            <p className="text-center mb-2 font-bold text-amber-900 text-base">¡Toca para servir!</p>
+            <div className="flex gap-5 justify-center">
               <button
                 onClick={() => serveDrink('coco')}
-                className="flex-1 max-w-[160px] py-3 bg-gradient-to-b from-amber-300 to-amber-500 hover:from-amber-400 hover:to-amber-600 active:scale-90 rounded-2xl text-center shadow-lg transition-all border-2 border-amber-600"
+                className="flex-1 max-w-[170px] py-3 bg-gradient-to-b from-amber-300 to-amber-500 hover:from-amber-400 hover:to-amber-600 active:scale-90 rounded-2xl text-center shadow-lg transition-all border-2 border-amber-600"
               >
-                <div className="w-16 h-16 mx-auto mb-1">
+                <div className="w-20 h-20 mx-auto">
                   <DrinkSVG type="coco" />
                 </div>
               </button>
               <button
                 onClick={() => serveDrink('mango')}
-                className="flex-1 max-w-[160px] py-3 bg-gradient-to-b from-yellow-300 to-yellow-500 hover:from-yellow-400 hover:to-yellow-600 active:scale-90 rounded-2xl text-center shadow-lg transition-all border-2 border-yellow-600"
+                className="flex-1 max-w-[170px] py-3 bg-gradient-to-b from-yellow-300 to-yellow-500 hover:from-yellow-400 hover:to-yellow-600 active:scale-90 rounded-2xl text-center shadow-lg transition-all border-2 border-yellow-600"
               >
-                <div className="w-16 h-16 mx-auto mb-1">
+                <div className="w-20 h-20 mx-auto">
                   <DrinkSVG type="mango" />
                 </div>
               </button>
@@ -952,7 +952,7 @@
         return (
           <GameIntroScreen
             game={games[0]}
-            instructions="¡Truenos asustan a las lagartijas! Toca a Coco rápido para calmarlo. ¡No dejes que el pánico llegue al máximo!"
+            instructions="¡Cuando suene un trueno, toca a Coco muchas veces para calmarlo! Si la barra roja se llena, pierdes."
             onStart={startGame}
           />
         );
@@ -989,7 +989,7 @@
           {/* Panic meter */}
           <div className="px-4 py-2 z-10">
             <div className="flex items-center gap-2">
-              <span className="text-white text-sm font-bold">PÁNICO:</span>
+              <span className="text-white text-sm font-bold">😰 MIEDO:</span>
               <div className="flex-1 bg-black/30 rounded-full h-5 overflow-hidden border border-white/30">
                 <div
                   className={`h-full rounded-full transition-all duration-300 ${
@@ -1002,7 +1002,7 @@
             </div>
             {panicLevel > 70 && (
               <p className="text-red-300 text-xs text-center mt-1 animate-pulse font-bold">
-                ¡¡CUIDADO!! ¡Coco está muy asustado!
+                ¡Toca a Coco más rápido! ¡Se está asustando mucho!
               </p>
             )}
           </div>
@@ -1110,8 +1110,8 @@
                 } opacity-50`} />
 
                 {/* Name label */}
-                <p className="text-center font-bold text-white text-sm bg-black/40 rounded-full px-3 py-0.5 mt-1">
-                  ¡Toca a Coco!
+                <p className="text-center font-bold text-white text-sm bg-black/40 rounded-full px-3 py-0.5 mt-1 animate-pulse">
+                  👆 ¡Tócame rápido!
                 </p>
               </div>
             </button>
@@ -1313,9 +1313,14 @@
           {/* Header */}
           <header className="bg-gradient-to-r from-green-500 to-emerald-600 text-white p-4 shadow-lg">
             <div className="max-w-4xl mx-auto flex items-center justify-between">
-              <div>
-                <h1 className="text-2xl sm:text-3xl font-bold">🎮 Los Juegos de Coco y Mango</h1>
-                <p className="text-sm opacity-90">13 mini-juegos basados en las historias</p>
+              <div className="flex items-center gap-3">
+                <a href="index.html" className="shrink-0 w-10 h-10 rounded-full overflow-hidden ring-2 ring-white/30 hover:ring-white/60 transition-all shadow-lg">
+                  <img src="imagenes/preview.png" alt="Inicio" className="w-full h-full object-cover" />
+                </a>
+                <div>
+                  <h1 className="text-xl sm:text-2xl font-bold">Los Juegos de Coco y Mango</h1>
+                  <p className="text-sm opacity-90">13 mini-juegos basados en las historias</p>
+                </div>
               </div>
               <a
                 href="index.html"

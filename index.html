@@ -35,7 +35,7 @@
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Comic+Neue:wght@400;700&family=Fredoka:wght@300;400;500;600;700&family=Literata:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Comic+Neue:wght@400;700&family=Courier+Prime&family=Fredoka:wght@300;400;500;600;700&family=Literata:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; }
     html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
@@ -104,6 +104,11 @@
       -webkit-text-fill-color: transparent;
       animation: shimmer 3s ease-in-out infinite;
     }
+
+    /* ── Reading fonts ── */
+    .font-reading { font-family: 'Literata', Georgia, serif; }
+    .font-body { font-family: 'Comic Neue', cursive; }
+    .font-mono { font-family: 'Courier Prime', 'Courier New', monospace; }
 
     /* ── Drop cap ── */
     .drop-cap::first-letter {
@@ -373,9 +378,16 @@
     // ═══════════════════════════════════════════════════════════
     const Reader = ({ story, index, title, content, loading, dark, onBack, onNav, total }) => {
       const [fs, setFs] = useState(1);
+      const [ff, setFf] = useState(0);
       const [progress, setProgress] = useState(0);
 
       const sizes = ['text-base leading-7', 'text-lg leading-8', 'text-xl leading-9', 'text-2xl leading-10'];
+      const fonts = [
+        { cls: 'font-reading', label: 'Serif' },
+        { cls: 'font-body', label: 'Comic' },
+        { cls: 'font-display', label: 'Fredoka' },
+        { cls: 'font-mono', label: 'Mono' },
+      ];
 
       useEffect(() => {
         const onScroll = () => {
@@ -407,6 +419,10 @@
                 </span>
               </div>
               <div className="flex items-center gap-0.5">
+                <button onClick={() => setFf(f => (f + 1) % fonts.length)}
+                  className={`h-8 px-2.5 rounded-full flex items-center justify-center text-[11px] font-bold transition-colors ${dark ? 'hover:bg-white/10 text-gray-400 bg-white/5' : 'hover:bg-black/5 text-gray-500 bg-black/[0.03]'}`}>
+                  {fonts[ff].label}
+                </button>
                 <button onClick={() => setFs(s => Math.max(0, s-1))} disabled={fs===0}
                   className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-colors disabled:opacity-20 ${dark ? 'hover:bg-white/10 text-gray-400' : 'hover:bg-black/5 text-gray-500'}`}>
                   A-
@@ -437,7 +453,7 @@
                 <div className="w-6 h-6 rounded-full border-2 border-coco-500 border-t-transparent animate-spin" />
               </div>
             ) : (
-              <div className={`font-reading ${sizes[fs]} ${dark ? 'text-gray-300' : 'text-ink-800'}`}>
+              <div className={`${fonts[ff].cls} ${sizes[fs]} ${dark ? 'text-gray-300' : 'text-ink-800'}`}>
                 {content && content.map((p, i) => (
                   <p key={i}
                     className={`mb-6 anim-fade-up ${i === 0 ? 'drop-cap' : ''}`}
@@ -529,6 +545,14 @@
 
       return (
         <div className={`min-h-screen transition-colors duration-300 ${dark ? 'bg-ink-950' : 'bg-ink-50'}`}>
+          {/* Home logo - top left */}
+          <a href="index.html"
+            className={`fixed top-3.5 left-3.5 z-50 w-9 h-9 rounded-full overflow-hidden shadow-lg ring-1 transition-all hover:scale-110 ${
+              dark ? 'ring-white/10 hover:ring-white/20' : 'ring-black/5 hover:ring-black/10'}`}
+          >
+            <img src="imagenes/preview.png" alt="Inicio" className="w-full h-full object-cover" />
+          </a>
+
           {/* Dark toggle */}
           <button onClick={() => setDark(d => !d)}
             className={`fixed top-3.5 right-3.5 z-50 w-9 h-9 rounded-full flex items-center justify-center shadow-lg ring-1 transition-all ${
