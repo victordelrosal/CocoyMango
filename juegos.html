@@ -751,213 +751,154 @@
     };
 
     // ==================== GAME 1: EL PRIMER DÍA DE CLASES ====================
-
-    // Scared lizard classmates scattered around
-    const ScaredLizard = ({ x, y, panicLevel, name }) => {
-      const isRunning = panicLevel > 70;
-      const isScared = panicLevel > 40;
-      return (
-        <div
-          className="absolute text-center transition-all duration-300"
-          style={{
-            left: `${x}%`,
-            top: `${y}%`,
-            transform: `translate(-50%, -50%) ${isRunning ? 'scale(0.8)' : 'scale(1)'}`,
-            animation: isRunning ? 'shake 0.2s infinite' : isScared ? 'shake 0.5s infinite' : 'none',
-          }}
-        >
-          <svg viewBox="0 0 60 70" className="w-10 h-12 sm:w-12 sm:h-14">
-            <ellipse cx="30" cy="40" rx="16" ry="18" fill="#6B8E23" />
-            <ellipse cx="30" cy="43" rx="11" ry="12" fill="#9ACD32" />
-            <ellipse cx="30" cy="22" rx="13" ry="11" fill="#6B8E23" />
-            <circle cx="24" cy="19" r="5" fill="white" />
-            <circle cx="36" cy="19" r="5" fill="white" />
-            {isScared ? (
-              <>
-                <circle cx="24" cy="19" r="3.5" fill="#222" />
-                <circle cx="36" cy="19" r="3.5" fill="#222" />
-                <ellipse cx="30" cy="30" rx="4" ry="5" fill="#222" />
-              </>
-            ) : (
-              <>
-                <circle cx="24.5" cy="19" r="2.5" fill="#222" />
-                <circle cx="36.5" cy="19" r="2.5" fill="#222" />
-                <path d="M 24 28 Q 30 33 36 28" fill="none" stroke="#222" strokeWidth="1.5" strokeLinecap="round" />
-              </>
-            )}
-          </svg>
-          <p className="text-[8px] sm:text-[10px] font-bold">{name}</p>
-        </div>
-      );
-    };
+    // "¿Qué fue ese ruido?" - Identify if it was thunder or something else
 
     const Game1PrimerDia = ({ isPaused, onGameEnd }) => {
-      const [gameState, setGameState] = useState('intro');
-      const [panicLevel, setPanicLevel] = useState(0); // 0-100, lose if reaches 100
-      const [calmPresses, setCalmPresses] = useState(0);
-      const [timeLeft, setTimeLeft] = useState(45);
-      const [thunderActive, setThunderActive] = useState(false);
-      const [screenFlash, setScreenFlash] = useState(false);
-      const [thunderCount, setThunderCount] = useState(0);
-      const [mangoTip, setMangoTip] = useState('');
-      const [showMangoTip, setShowMangoTip] = useState(false);
-      const [cocoState, setCocoState] = useState('normal'); // normal, scared, calming
+      const [gameState, setGameState] = useState('intro'); // intro, playing, showing, feedback, ended
       const [score, setScore] = useState(0);
-      const [classmates, setClassmates] = useState([
-        { name: 'Diego', x: 15, y: 30 },
-        { name: 'Rosita', x: 80, y: 25 },
-        { name: 'Luis', x: 25, y: 65 },
-        { name: 'Lola', x: 75, y: 60 },
-        { name: 'Pepe', x: 50, y: 25 },
-      ]);
+      const [lives, setLives] = useState(3);
+      const [round, setRound] = useState(0);
+      const [currentSound, setCurrentSound] = useState(null);
+      const [options, setOptions] = useState([]);
+      const [selectedAnswer, setSelectedAnswer] = useState(null);
+      const [isCorrect, setIsCorrect] = useState(null);
+      const [screenFlash, setScreenFlash] = useState(false);
+      const [cocoState, setCocoState] = useState('normal'); // normal, scared, happy, sad
+      const [mangoMessage, setMangoMessage] = useState('');
 
-      const mangoTips = [
-        '¡Tranquilos! Solo fue un ruido.',
-        'Eso no fue un rayo, fue un coche.',
-        '¡Respira profundo, Coco!',
-        'No pasa nada, estamos seguros.',
-        'Escuchen bien antes de asustarse.',
-        '¡Calma! La maestra está aquí.',
-        'Si fuera un rayo, lo veríamos.',
+      const totalRounds = 10;
+
+      // All possible sound sources
+      const soundSources = [
+        { id: 'thunder', emoji: '⚡', label: 'Trueno', isThunder: true },
+        { id: 'car', emoji: '🚗', label: 'Coche', isThunder: false },
+        { id: 'door', emoji: '🚪', label: 'Puerta', isThunder: false },
+        { id: 'drum', emoji: '🥁', label: 'Tambor', isThunder: false },
+        { id: 'balloon', emoji: '🎈', label: 'Globo', isThunder: false },
+        { id: 'firework', emoji: '🎆', label: 'Cohete', isThunder: false },
+        { id: 'truck', emoji: '🚚', label: 'Camión', isThunder: false },
+        { id: 'book', emoji: '📚', label: 'Libro', isThunder: false },
+      ];
+
+      const mangoCorrectMessages = [
+        '¡Muy bien! Escuchaste con cuidado.',
+        '¡Exacto! No era un trueno.',
+        '¡Bien hecho! Mantén la calma.',
+        '¡Así se hace! Piensa antes de asustarte.',
+        '¡Perfecto! Eso es usar los oídos.',
+      ];
+
+      const mangoWrongMessages = [
+        '¡Ups! Escucha mejor la próxima vez.',
+        'No te preocupes, sigue intentando.',
+        'Tranquilo, todos nos equivocamos.',
       ];
 
       const startGame = () => {
         setGameState('playing');
-        setPanicLevel(20);
-        setCalmPresses(0);
-        setTimeLeft(45);
-        setThunderCount(0);
         setScore(0);
+        setLives(3);
+        setRound(0);
         setCocoState('normal');
+        nextRound(0);
       };
 
-      // Thunder events - random thunder strikes that raise panic
-      useEffect(() => {
-        if (gameState !== 'playing' || isPaused) return;
+      const nextRound = (currentRound) => {
+        if (currentRound >= totalRounds) {
+          setGameState('ended');
+          return;
+        }
 
-        const triggerThunder = () => {
-          const delay = 2500 + Math.random() * 4000; // Random 2.5-6.5s
-          const timeout = setTimeout(() => {
-            if (gameState !== 'playing') return;
+        // Randomly decide if this round has real thunder (30% chance)
+        const hasThunder = Math.random() < 0.3;
+        const correctAnswer = hasThunder
+          ? soundSources.find(s => s.isThunder)
+          : soundSources.filter(s => !s.isThunder)[Math.floor(Math.random() * (soundSources.length - 1))];
 
-            setThunderActive(true);
-            setScreenFlash(true);
-            setThunderCount(prev => prev + 1);
-            setCocoState('scared');
+        // Create options: correct answer + 1 wrong one
+        const wrongOptions = soundSources.filter(s => s.id !== correctAnswer.id);
+        const wrongAnswer = wrongOptions[Math.floor(Math.random() * wrongOptions.length)];
 
-            // Panic spike
-            setPanicLevel(prev => Math.min(100, prev + 15 + Math.floor(Math.random() * 10)));
+        // Randomize order
+        const opts = Math.random() > 0.5 ? [correctAnswer, wrongAnswer] : [wrongAnswer, correctAnswer];
 
-            // Flash effect
-            setTimeout(() => setScreenFlash(false), 150);
-            setTimeout(() => {
-              setScreenFlash(true);
-              setTimeout(() => setScreenFlash(false), 100);
-            }, 300);
+        setCurrentSound(correctAnswer);
+        setOptions(opts);
+        setSelectedAnswer(null);
+        setIsCorrect(null);
+        setRound(currentRound + 1);
+        setCocoState('scared');
+        setMangoMessage('');
 
-            // Thunder fades
-            setTimeout(() => setThunderActive(false), 1500);
+        // Flash effect
+        setScreenFlash(true);
+        setTimeout(() => setScreenFlash(false), 150);
+        setTimeout(() => {
+          setScreenFlash(true);
+          setTimeout(() => setScreenFlash(false), 100);
+        }, 250);
 
-            // Mango gives a tip
-            const tip = mangoTips[Math.floor(Math.random() * mangoTips.length)];
-            setMangoTip(tip);
-            setShowMangoTip(true);
-            setTimeout(() => setShowMangoTip(false), 3000);
+        setGameState('showing');
+      };
 
-            triggerThunder(); // Schedule next
-          }, delay);
+      const handleAnswer = (answer) => {
+        if (gameState !== 'showing' || isPaused) return;
 
-          return timeout;
-        };
+        setSelectedAnswer(answer.id);
+        const correct = answer.id === currentSound.id;
+        setIsCorrect(correct);
+        setGameState('feedback');
 
-        const timeout = triggerThunder();
-        return () => clearTimeout(timeout);
-      }, [gameState, isPaused]);
+        if (correct) {
+          setScore(prev => prev + 10);
+          setCocoState('happy');
+          setMangoMessage(mangoCorrectMessages[Math.floor(Math.random() * mangoCorrectMessages.length)]);
+        } else {
+          setLives(prev => prev - 1);
+          setCocoState('sad');
+          setMangoMessage(mangoWrongMessages[Math.floor(Math.random() * mangoWrongMessages.length)]);
 
-      // Passive panic increase (anxiety builds)
-      useEffect(() => {
-        if (gameState !== 'playing' || isPaused) return;
+          if (lives <= 1) {
+            setTimeout(() => setGameState('ended'), 1500);
+            return;
+          }
+        }
 
-        const interval = setInterval(() => {
-          setPanicLevel(prev => {
-            const newLevel = Math.min(100, prev + 1);
-            if (newLevel >= 100) {
-              setGameState('ended');
-            }
-            return newLevel;
-          });
-        }, 800);
-
-        return () => clearInterval(interval);
-      }, [gameState, isPaused]);
-
-      // Timer
-      useEffect(() => {
-        if (gameState !== 'playing' || isPaused) return;
-
-        const timer = setInterval(() => {
-          setTimeLeft(prev => {
-            if (prev <= 1) {
-              setGameState('ended');
-              return 0;
-            }
-            return prev - 1;
-          });
-        }, 1000);
-
-        return () => clearInterval(timer);
-      }, [gameState, isPaused]);
-
-      // Tap to calm Coco
-      const calmDown = () => {
-        if (gameState !== 'playing' || isPaused) return;
-
-        setCalmPresses(prev => prev + 1);
-        setPanicLevel(prev => Math.max(0, prev - 8));
-        setScore(prev => prev + 5);
-        setCocoState('calming');
-        setTimeout(() => setCocoState(panicLevel > 50 ? 'scared' : 'normal'), 400);
+        // Move to next round after delay
+        setTimeout(() => {
+          if (lives > 1 || correct) {
+            nextRound(round);
+          }
+        }, 1800);
       };
 
       const getStars = () => {
-        if (panicLevel >= 100) return 0; // Lost
-        if (timeLeft <= 0 && panicLevel < 100) {
-          if (panicLevel < 20) return 3;
-          if (panicLevel < 50) return 2;
-          return 1;
-        }
-        if (score >= 150) return 3;
-        if (score >= 80) return 2;
-        if (score >= 30) return 1;
+        if (lives === 0) return 0;
+        if (score >= 80) return 3;
+        if (score >= 50) return 2;
+        if (score >= 20) return 1;
         return 0;
       };
 
       const getMessage = () => {
-        if (panicLevel >= 100) return '¡Coco entró en pánico!';
-        if (timeLeft <= 0 && panicLevel < 30) return '¡La clase puede empezar!';
-        if (timeLeft <= 0) return '¡Sobreviviste la tormenta!';
-        return '¡Buen intento!';
+        if (lives === 0) return '¡Se acabaron las vidas!';
+        if (score >= 80) return '¡Excelente! ¡Escuchas muy bien!';
+        if (score >= 50) return '¡Muy bien! Estás aprendiendo.';
+        return '¡Buen intento! Sigue practicando.';
       };
 
-      // Sky color based on panic/thunder
-      const skyGradient = thunderActive
-        ? 'from-gray-800 via-gray-700 to-gray-600'
-        : panicLevel > 60
-        ? 'from-gray-600 via-gray-500 to-green-800'
-        : panicLevel > 30
-        ? 'from-gray-400 via-blue-300 to-green-700'
-        : 'from-blue-400 via-blue-300 to-green-600';
-
+      // Intro screen
       if (gameState === 'intro') {
         return (
           <GameIntroScreen
             game={games[0]}
-            instructions="¡Cuando suene un trueno, toca a Coco muchas veces para calmarlo! Si la barra roja se llena, pierdes."
+            instructions="¡Escucha el ruido y adivina qué lo hizo! ¿Fue un trueno de verdad o algo más?"
             onStart={startGame}
           />
         );
       }
 
+      // End screen
       if (gameState === 'ended') {
         return (
           <GameEndScreen
@@ -970,8 +911,9 @@
         );
       }
 
+      // Game UI
       return (
-        <div className={`h-full flex flex-col bg-gradient-to-b ${skyGradient} relative overflow-hidden transition-all duration-500`}>
+        <div className="h-full flex flex-col bg-gradient-to-b from-blue-400 via-blue-300 to-green-600 relative overflow-hidden">
           {/* Lightning flash overlay */}
           {screenFlash && (
             <div className="absolute inset-0 bg-white/80 z-40 pointer-events-none" />
@@ -979,215 +921,156 @@
 
           {/* Stats bar */}
           <div className="flex justify-between items-center p-3 bg-black/30 text-white z-10">
-            <div className="text-lg font-bold">⭐ {score}</div>
-            <div className="text-lg font-bold">Truenos: {thunderCount}</div>
-            <div className={`text-lg font-bold ${timeLeft <= 10 ? 'text-red-300 animate-pulse' : ''}`}>
-              ⏱️ {timeLeft}s
+            <div className="flex gap-1">
+              {[...Array(3)].map((_, i) => (
+                <span key={i} className={`text-2xl ${i < lives ? '' : 'opacity-30 grayscale'}`}>❤️</span>
+              ))}
             </div>
+            <div className="text-xl font-bold">Ronda {round}/{totalRounds}</div>
+            <div className="text-xl font-bold">⭐ {score}</div>
           </div>
 
-          {/* Panic meter */}
-          <div className="px-4 py-2 z-10">
-            <div className="flex items-center gap-2">
-              <span className="text-white text-sm font-bold">😰 MIEDO:</span>
-              <div className="flex-1 bg-black/30 rounded-full h-5 overflow-hidden border border-white/30">
-                <div
-                  className={`h-full rounded-full transition-all duration-300 ${
-                    panicLevel > 70 ? 'bg-red-500' : panicLevel > 40 ? 'bg-yellow-400' : 'bg-green-400'
-                  }`}
-                  style={{ width: `${panicLevel}%` }}
-                />
-              </div>
-              <span className="text-white text-sm font-bold w-10 text-right">{Math.round(panicLevel)}%</span>
-            </div>
-            {panicLevel > 70 && (
-              <p className="text-red-300 text-xs text-center mt-1 animate-pulse font-bold">
-                ¡Toca a Coco más rápido! ¡Se está asustando mucho!
-              </p>
-            )}
-          </div>
-
-          {/* Scene: outdoor school under tree */}
-          <div className="flex-1 relative">
-            {/* Tree */}
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[80%] sm:w-[60%]">
-              <svg viewBox="0 0 200 100" className="w-full">
-                {/* Tree trunk */}
-                <rect x="90" y="60" width="20" height="50" rx="4" fill="#5D4037" />
-                {/* Canopy */}
-                <ellipse cx="100" cy="40" rx="80" ry="40" fill="#2E7D32" opacity="0.8" />
-                <ellipse cx="70" cy="35" rx="50" ry="30" fill="#388E3C" opacity="0.7" />
-                <ellipse cx="130" cy="35" rx="50" ry="30" fill="#388E3C" opacity="0.7" />
-                <ellipse cx="100" cy="30" rx="60" ry="28" fill="#43A047" opacity="0.6" />
-              </svg>
-            </div>
-
-            {/* Scattered classmates */}
-            {classmates.map((c, i) => (
-              <ScaredLizard key={i} x={c.x} y={c.y} panicLevel={panicLevel} name={c.name} />
-            ))}
-
-            {/* Lightning bolts during thunder */}
-            {thunderActive && (
-              <>
-                <svg className="absolute top-0 left-[20%] w-12 h-24 z-20 animate-pulse" viewBox="0 0 40 80">
-                  <polygon points="20,0 8,35 18,35 5,80 35,30 22,30 35,0" fill="#FFD600" stroke="#FFA000" strokeWidth="1" />
-                </svg>
-                <svg className="absolute top-2 right-[15%] w-10 h-20 z-20 animate-pulse" viewBox="0 0 40 80">
-                  <polygon points="20,0 8,35 18,35 5,80 35,30 22,30 35,0" fill="#FFD600" stroke="#FFA000" strokeWidth="1" opacity="0.7" />
-                </svg>
-              </>
-            )}
-
-            {/* COCO - main tappable character */}
-            <button
-              onClick={calmDown}
-              className="absolute bottom-[15%] left-1/2 -translate-x-1/2 z-30 focus:outline-none active:scale-90 transition-transform"
-              style={{
-                animation: cocoState === 'scared' ? 'shake 0.15s infinite' : cocoState === 'calming' ? 'pulse 0.3s' : 'none',
-              }}
-            >
-              <div className="relative">
-                <svg viewBox="0 0 100 120" className="w-24 h-28 sm:w-28 sm:h-32">
-                  {/* Body */}
-                  <ellipse cx="50" cy="65" rx="28" ry="32" fill="#4CAF50" />
-                  <ellipse cx="50" cy="70" rx="20" ry="22" fill="#81C784" />
-                  {/* Head */}
-                  <ellipse cx="50" cy="32" rx="22" ry="18" fill="#4CAF50" />
-                  {/* Eyes */}
-                  <circle cx="40" cy="28" r="8" fill="white" />
-                  <circle cx="60" cy="28" r="8" fill="white" />
-                  {cocoState === 'scared' ? (
-                    <>
-                      {/* Big scared eyes */}
-                      <circle cx="40" cy="28" r="6" fill="#222" />
-                      <circle cx="60" cy="28" r="6" fill="#222" />
-                      <circle cx="42" cy="26" r="2" fill="white" />
-                      <circle cx="62" cy="26" r="2" fill="white" />
-                      {/* Scared mouth */}
-                      <ellipse cx="50" cy="42" rx="6" ry="7" fill="#222" />
-                      {/* Sweat drop */}
-                      <path d="M 70 20 Q 73 15 74 22 Q 73 26 70 20" fill="#4FC3F7" />
-                    </>
-                  ) : cocoState === 'calming' ? (
-                    <>
-                      {/* Calm/relieved eyes */}
-                      <path d="M 34 28 Q 40 24 46 28" fill="none" stroke="#222" strokeWidth="2.5" strokeLinecap="round" />
-                      <path d="M 54 28 Q 60 24 66 28" fill="none" stroke="#222" strokeWidth="2.5" strokeLinecap="round" />
-                      {/* Peaceful smile */}
-                      <path d="M 40 40 Q 50 48 60 40" fill="none" stroke="#222" strokeWidth="2" strokeLinecap="round" />
-                      {/* Sparkles */}
-                      <text x="15" y="18" fontSize="10">✨</text>
-                      <text x="78" y="18" fontSize="10">✨</text>
-                    </>
-                  ) : (
-                    <>
-                      <circle cx="41" cy="28" r="4.5" fill="#222" />
-                      <circle cx="61" cy="28" r="4.5" fill="#222" />
-                      <circle cx="42.5" cy="26" r="1.5" fill="white" />
-                      <circle cx="62.5" cy="26" r="1.5" fill="white" />
-                      <path d="M 40 40 Q 50 46 60 40" fill="none" stroke="#222" strokeWidth="2" strokeLinecap="round" />
-                    </>
-                  )}
-                  {/* Backpack */}
-                  <rect x="18" y="50" width="14" height="18" rx="4" fill="#FF9800" />
-                  <rect x="20" y="52" width="10" height="6" rx="2" fill="#FFB74D" />
-                  {/* Arms */}
-                  <ellipse cx="24" cy="60" rx="6" ry="4" fill="#4CAF50" transform="rotate(-20 24 60)" />
-                  <ellipse cx="76" cy="60" rx="6" ry="4" fill="#4CAF50" transform="rotate(20 76 60)" />
-                  {/* Feet */}
-                  <ellipse cx="36" cy="96" rx="8" ry="4" fill="#4CAF50" />
-                  <ellipse cx="64" cy="96" rx="8" ry="4" fill="#4CAF50" />
-                  {/* Spiky back */}
-                  <polygon points="42,34 45,28 48,34" fill="#388E3C" />
-                  <polygon points="48,33 51,27 54,33" fill="#388E3C" />
-                  <polygon points="54,34 57,28 60,34" fill="#388E3C" />
-                </svg>
-
-                {/* Tap indicator ring */}
-                <div className={`absolute inset-0 rounded-full border-4 ${
-                  panicLevel > 60 ? 'border-red-400 animate-ping' : 'border-green-300 animate-pulse'
-                } opacity-50`} />
-
-                {/* Name label */}
-                <p className="text-center font-bold text-white text-sm bg-black/40 rounded-full px-3 py-0.5 mt-1 animate-pulse">
-                  👆 ¡Tócame rápido!
+          {/* Main game area */}
+          <div className="flex-1 flex flex-col items-center justify-center p-4 relative">
+            {/* BOOM text */}
+            {gameState === 'showing' && (
+              <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20">
+                <p className="text-5xl sm:text-6xl font-bold text-yellow-300 animate-bounce"
+                  style={{ textShadow: '3px 3px 6px rgba(0,0,0,0.8)' }}>
+                  ¡¡PUUUUM!!
                 </p>
               </div>
-            </button>
+            )}
 
-            {/* MANGO - calm friend with tip */}
-            <div className="absolute bottom-[15%] right-[8%] z-20">
-              <svg viewBox="0 0 80 100" className="w-16 h-20 sm:w-20 sm:h-24">
-                {/* Body */}
-                <ellipse cx="40" cy="55" rx="20" ry="24" fill="#FF8F00" />
-                <ellipse cx="40" cy="58" rx="14" ry="16" fill="#FFB74D" />
-                {/* Head */}
-                <ellipse cx="40" cy="28" rx="16" ry="14" fill="#FF8F00" />
-                {/* Eyes - always calm */}
-                <circle cx="33" cy="25" r="5.5" fill="white" />
-                <circle cx="47" cy="25" r="5.5" fill="white" />
-                <circle cx="34" cy="25" r="3" fill="#222" />
-                <circle cx="48" cy="25" r="3" fill="#222" />
-                <circle cx="35" cy="23.5" r="1" fill="white" />
-                <circle cx="49" cy="23.5" r="1" fill="white" />
-                {/* Calm confident smile */}
-                <path d="M 32 34 Q 40 42 48 34" fill="none" stroke="#222" strokeWidth="2" strokeLinecap="round" />
-                {/* Arms */}
-                <ellipse cx="22" cy="50" rx="5" ry="3" fill="#FF8F00" transform="rotate(-20 22 50)" />
-                <ellipse cx="58" cy="50" rx="5" ry="3" fill="#FF8F00" transform="rotate(20 58 50)" />
-                {/* Feet */}
-                <ellipse cx="30" cy="78" rx="6" ry="3" fill="#FF8F00" />
-                <ellipse cx="50" cy="78" rx="6" ry="3" fill="#FF8F00" />
-              </svg>
-
-              {/* Mango speech bubble with tip */}
-              {showMangoTip && (
-                <div className="absolute -top-16 -left-20 sm:-left-24 w-40 sm:w-48 bg-white rounded-xl p-2 shadow-lg border-2 border-orange-300 z-30"
-                  style={{ animation: 'fadeIn 0.3s ease-out' }}
-                >
-                  <p className="text-xs sm:text-sm font-bold text-amber-800">{mangoTip}</p>
-                  <div className="absolute bottom-[-8px] right-8 w-4 h-4 bg-white border-r-2 border-b-2 border-orange-300 transform rotate-45" />
-                </div>
-              )}
-              <p className="text-center font-bold text-white text-xs bg-orange-500/70 rounded-full px-2 py-0.5">
-                Mango
+            {/* Question */}
+            <div className="bg-white/90 rounded-2xl p-4 sm:p-6 shadow-xl mb-6 text-center max-w-md">
+              <p className="text-xl sm:text-2xl font-bold text-gray-800 mb-2">
+                🤔 ¿Qué fue ese ruido?
+              </p>
+              <p className="text-base sm:text-lg text-gray-600">
+                ¡Escucha bien y elige la respuesta correcta!
               </p>
             </div>
 
-            {/* Ground / flowers */}
-            <div className="absolute bottom-0 left-0 right-0 h-[10%] bg-gradient-to-t from-green-800 to-green-700">
-              <div className="flex justify-around pt-1">
-                <span className="text-sm">🌸</span>
-                <span className="text-sm">🌼</span>
-                <span className="text-sm">🌺</span>
-                <span className="text-sm">🌸</span>
-                <span className="text-sm">🌼</span>
-                <span className="text-sm">🌺</span>
-                <span className="text-sm">🌸</span>
+            {/* Coco - reacts to answers */}
+            <div className="mb-6">
+              <svg viewBox="0 0 100 120" className={`w-28 h-32 sm:w-36 sm:h-40 ${cocoState === 'scared' ? 'animate-[shake_0.3s_infinite]' : ''}`}>
+                {/* Body */}
+                <ellipse cx="50" cy="65" rx="28" ry="32" fill="#4CAF50" />
+                <ellipse cx="50" cy="70" rx="20" ry="22" fill="#81C784" />
+                {/* Head */}
+                <ellipse cx="50" cy="32" rx="22" ry="18" fill="#4CAF50" />
+                {/* Eyes */}
+                <circle cx="40" cy="28" r="8" fill="white" />
+                <circle cx="60" cy="28" r="8" fill="white" />
+                {cocoState === 'scared' ? (
+                  <>
+                    <circle cx="40" cy="28" r="6" fill="#222" />
+                    <circle cx="60" cy="28" r="6" fill="#222" />
+                    <ellipse cx="50" cy="44" rx="6" ry="7" fill="#222" />
+                    <path d="M 70 18 Q 73 13 74 20 Q 73 24 70 18" fill="#4FC3F7" />
+                  </>
+                ) : cocoState === 'happy' ? (
+                  <>
+                    <path d="M 34 28 Q 40 24 46 28" fill="none" stroke="#222" strokeWidth="2.5" strokeLinecap="round" />
+                    <path d="M 54 28 Q 60 24 66 28" fill="none" stroke="#222" strokeWidth="2.5" strokeLinecap="round" />
+                    <path d="M 38 42 Q 50 52 62 42" fill="none" stroke="#222" strokeWidth="2.5" strokeLinecap="round" />
+                    <text x="15" y="15" fontSize="12">⭐</text>
+                    <text x="78" y="15" fontSize="12">⭐</text>
+                  </>
+                ) : cocoState === 'sad' ? (
+                  <>
+                    <circle cx="40" cy="30" r="5" fill="#222" />
+                    <circle cx="60" cy="30" r="5" fill="#222" />
+                    <path d="M 38 46 Q 50 40 62 46" fill="none" stroke="#222" strokeWidth="2" strokeLinecap="round" />
+                    <ellipse cx="32" cy="40" r="4" fill="#90CAF9" opacity="0.6" />
+                    <ellipse cx="68" cy="40" r="4" fill="#90CAF9" opacity="0.6" />
+                  </>
+                ) : (
+                  <>
+                    <circle cx="41" cy="28" r="4.5" fill="#222" />
+                    <circle cx="61" cy="28" r="4.5" fill="#222" />
+                    <path d="M 40 42 Q 50 48 60 42" fill="none" stroke="#222" strokeWidth="2" strokeLinecap="round" />
+                  </>
+                )}
+                {/* Backpack */}
+                <rect x="18" y="50" width="14" height="18" rx="4" fill="#FF9800" />
+                {/* Feet */}
+                <ellipse cx="36" cy="96" rx="8" ry="4" fill="#4CAF50" />
+                <ellipse cx="64" cy="96" rx="8" ry="4" fill="#4CAF50" />
+              </svg>
+            </div>
+
+            {/* Answer options */}
+            <div className="flex gap-4 sm:gap-6 justify-center w-full max-w-md">
+              {options.map(opt => {
+                const isSelected = selectedAnswer === opt.id;
+                const showResult = gameState === 'feedback';
+                const isCorrectAnswer = opt.id === currentSound?.id;
+
+                let bgColor = 'bg-white hover:bg-gray-50 active:scale-95';
+                if (showResult && isSelected) {
+                  bgColor = isCorrect ? 'bg-green-400 scale-105' : 'bg-red-400 scale-95';
+                } else if (showResult && isCorrectAnswer && !isCorrect) {
+                  bgColor = 'bg-green-200';
+                }
+
+                return (
+                  <button
+                    key={opt.id}
+                    onClick={() => handleAnswer(opt)}
+                    disabled={gameState !== 'showing'}
+                    className={`flex-1 py-5 sm:py-6 rounded-2xl shadow-lg transition-all ${bgColor} ${gameState !== 'showing' ? 'pointer-events-none' : ''}`}
+                  >
+                    <span className="text-5xl sm:text-6xl block mb-2">{opt.emoji}</span>
+                    <span className="text-lg sm:text-xl font-bold text-gray-800">{opt.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Mango's feedback */}
+            {mangoMessage && (
+              <div className="absolute bottom-4 right-4 flex items-end gap-2 z-30">
+                <div className="bg-white rounded-xl p-3 shadow-lg border-2 border-orange-300 max-w-[200px]">
+                  <p className="text-sm font-bold text-amber-800">{mangoMessage}</p>
+                </div>
+                <div className="text-4xl">🦎</div>
               </div>
+            )}
+
+            {/* Result feedback overlay */}
+            {gameState === 'feedback' && (
+              <div className="absolute top-1/3 left-1/2 -translate-x-1/2 z-30">
+                <p className={`text-4xl sm:text-5xl font-bold ${isCorrect ? 'text-green-500' : 'text-red-500'}`}
+                  style={{ textShadow: '2px 2px 4px rgba(0,0,0,0.3)' }}>
+                  {isCorrect ? '¡Correcto! ✓' : '¡Incorrecto! ✗'}
+                </p>
+                {!isCorrect && currentSound && (
+                  <p className="text-xl text-white text-center mt-2" style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.5)' }}>
+                    Era: {currentSound.emoji} {currentSound.label}
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Ground */}
+          <div className="h-[8%] bg-gradient-to-t from-green-800 to-green-700">
+            <div className="flex justify-around pt-1">
+              <span className="text-sm">🌸</span>
+              <span className="text-sm">🌼</span>
+              <span className="text-sm">🌺</span>
+              <span className="text-sm">🌸</span>
+              <span className="text-sm">🌼</span>
             </div>
           </div>
 
-          {/* Thunder sound text */}
-          {thunderActive && (
-            <div className="absolute top-1/4 left-1/2 -translate-x-1/2 z-40 pointer-events-none">
-              <p className="text-4xl sm:text-5xl font-bold text-yellow-300 animate-bounce"
-                style={{ textShadow: '2px 2px 4px rgba(0,0,0,0.8)' }}>
-                ¡¡PUUUUM!!
-              </p>
-            </div>
-          )}
-
-          {/* CSS animations */}
           <style>{`
-            @keyframes pulse {
-              0%, 100% { transform: translate(-50%, 0) scale(1); }
-              50% { transform: translate(-50%, 0) scale(1.1); }
-            }
-            @keyframes fadeIn {
-              from { opacity: 0; transform: translateY(5px); }
-              to { opacity: 1; transform: translateY(0); }
+            @keyframes shake {
+              0%, 100% { transform: translateX(0); }
+              25% { transform: translateX(-4px); }
+              75% { transform: translateX(4px); }
             }
           `}</style>
         </div>
