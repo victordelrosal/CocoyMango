@@ -1,0 +1,1357 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Los Juegos de Coco y Mango</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎮</text></svg>">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta property="og:image" content="https://victordelrosal.github.io/CocoyMango/imagenes/preview.png">
+  <meta property="og:title" content="Los Juegos de Coco y Mango">
+  <meta property="og:description" content="¡Juega con Coco y Mango en 13 mini-juegos!">
+  <meta property="og:url" content="https://cocoymango.net/juegos.html">
+  <meta property="og:type" content="website">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Comic+Neue:wght@400;700&display=swap');
+
+    * {
+      font-family: 'Comic Neue', cursive;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+
+    .game-card {
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .game-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 12px 24px rgba(0,0,0,0.15);
+    }
+
+    .game-card:active {
+      transform: scale(0.98);
+    }
+
+    .play-btn {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      transition: all 0.2s ease;
+    }
+
+    .play-btn:hover {
+      background: linear-gradient(135deg, #059669 0%, #047857 100%);
+      transform: scale(1.05);
+    }
+
+    .stars {
+      color: #fbbf24;
+    }
+
+    /* Game container styles */
+    .game-container {
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      background: #1a1a2e;
+    }
+
+    /* Prevent scroll during game */
+    body.game-active {
+      overflow: hidden;
+    }
+  </style>
+</head>
+<body class="bg-gradient-to-b from-green-100 to-orange-100 min-h-screen">
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useCallback, useRef } = React;
+
+    // Game metadata
+    const games = [
+      { id: 1, title: "El primer día de clases", type: "Calma", emoji: "⚡", color: "from-yellow-400 to-orange-400" },
+      { id: 2, title: "El volcán", type: "Corredor", emoji: "🌋", color: "from-red-500 to-orange-500" },
+      { id: 3, title: "Nieve", type: "Atrapar", emoji: "❄️", color: "from-blue-300 to-cyan-300" },
+      { id: 4, title: "El cuervo y los primos", type: "Escondite", emoji: "🐦‍⬛", color: "from-gray-600 to-gray-800" },
+      { id: 5, title: "Avión de papel", type: "Vuelo", emoji: "✈️", color: "from-sky-400 to-blue-500" },
+      { id: 6, title: "Agua de coco y mango", type: "Servir", emoji: "🥥", color: "from-green-400 to-yellow-400" },
+      { id: 7, title: "La alcantarilla", type: "Laberinto", emoji: "🕳️", color: "from-stone-500 to-stone-700" },
+      { id: 8, title: "El papalote", type: "Balance", emoji: "🪁", color: "from-purple-400 to-pink-400" },
+      { id: 9, title: "El tesoro perdido", type: "Puzzle", emoji: "🗺️", color: "from-amber-500 to-yellow-500" },
+      { id: 10, title: "La carrera de barquitos", type: "Carrera", emoji: "⛵", color: "from-blue-400 to-teal-400" },
+      { id: 11, title: "El día de San Patricio", type: "Buscar", emoji: "☘️", color: "from-green-500 to-emerald-500" },
+      { id: 12, title: "La aventura al aeropuerto", type: "Tiempo", emoji: "🚌", color: "from-indigo-400 to-purple-500" },
+      { id: 13, title: "El boleto número 13", type: "Atrapar", emoji: "🎫", color: "from-rose-400 to-red-500" },
+    ];
+
+    // ==================== SHARED GAME COMPONENTS ====================
+
+    // Star rating display
+    const StarRating = ({ stars, maxStars = 3 }) => (
+      <div className="flex gap-1">
+        {[...Array(maxStars)].map((_, i) => (
+          <span key={i} className={`text-2xl ${i < stars ? 'stars' : 'text-gray-300'}`}>
+            ★
+          </span>
+        ))}
+      </div>
+    );
+
+    // Game wrapper component
+    const GameWrapper = ({ game, onClose, children }) => {
+      const [isPaused, setIsPaused] = useState(false);
+
+      useEffect(() => {
+        document.body.classList.add('game-active');
+        return () => document.body.classList.remove('game-active');
+      }, []);
+
+      return (
+        <div className="game-container flex flex-col">
+          {/* Game header */}
+          <div className="flex justify-between items-center p-3 bg-black/30 text-white">
+            <button
+              onClick={onClose}
+              className="p-2 hover:bg-white/20 rounded-full"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+            </button>
+            <h2 className="text-lg font-bold">{game.title}</h2>
+            <button
+              onClick={() => setIsPaused(!isPaused)}
+              className="p-2 hover:bg-white/20 rounded-full"
+            >
+              {isPaused ? (
+                <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M8 5v14l11-7z"/>
+                </svg>
+              ) : (
+                <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
+                </svg>
+              )}
+            </button>
+          </div>
+
+          {/* Game content */}
+          <div className="flex-1 relative">
+            {isPaused && (
+              <div className="absolute inset-0 bg-black/70 flex items-center justify-center z-50">
+                <div className="text-center text-white">
+                  <p className="text-3xl mb-4">⏸️ Pausado</p>
+                  <button
+                    onClick={() => setIsPaused(false)}
+                    className="px-6 py-3 bg-green-500 rounded-full text-xl font-bold hover:bg-green-600"
+                  >
+                    Continuar
+                  </button>
+                </div>
+              </div>
+            )}
+            {React.cloneElement(children, { isPaused })}
+          </div>
+        </div>
+      );
+    };
+
+    // Game end screen
+    const GameEndScreen = ({ score, stars, onRestart, onExit, message }) => (
+      <div className="absolute inset-0 bg-black/80 flex items-center justify-center z-50">
+        <div className="bg-white rounded-2xl p-8 text-center max-w-sm mx-4">
+          <p className="text-4xl mb-2">{stars >= 3 ? '🎉' : stars >= 2 ? '👏' : '👍'}</p>
+          <p className="text-2xl font-bold mb-2">{message || '¡Bien hecho!'}</p>
+          <p className="text-xl mb-4">Puntos: {score}</p>
+          <StarRating stars={stars} />
+          <div className="flex gap-4 mt-6 justify-center">
+            <button
+              onClick={onRestart}
+              className="px-6 py-3 bg-green-500 text-white rounded-full font-bold hover:bg-green-600"
+            >
+              🔄 Otra vez
+            </button>
+            <button
+              onClick={onExit}
+              className="px-6 py-3 bg-gray-500 text-white rounded-full font-bold hover:bg-gray-600"
+            >
+              🏠 Salir
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+
+    // Game intro screen
+    const GameIntroScreen = ({ game, instructions, onStart }) => (
+      <div className="absolute inset-0 bg-gradient-to-b from-green-400 to-green-600 flex items-center justify-center z-50">
+        <div className="text-center text-white px-6">
+          <p className="text-6xl mb-4">{game.emoji}</p>
+          <h2 className="text-3xl font-bold mb-2">{game.title}</h2>
+          <p className="text-xl mb-6 opacity-90">{instructions}</p>
+          <button
+            onClick={onStart}
+            className="px-8 py-4 bg-white text-green-600 rounded-full text-2xl font-bold hover:bg-green-100 shadow-lg"
+          >
+            ¡Jugar!
+          </button>
+        </div>
+      </div>
+    );
+
+    // ==================== GAME 6: AGUA DE COCO Y MANGO ====================
+
+    // SVG Lizard customer with expressive face
+    const LizardCustomer = ({ type, patience, status }) => {
+      const isHappy = status === 'happy';
+      const isAngry = patience < 30 && status !== 'happy';
+      const bodyColor = type === 'coco' ? '#6B8E23' : '#8FBC8F';
+      const bellyColor = type === 'coco' ? '#9ACD32' : '#B0E0A0';
+
+      return (
+        <svg viewBox="0 0 100 120" className="w-full h-full">
+          {/* Body */}
+          <ellipse cx="50" cy="65" rx="28" ry="32" fill={bodyColor} />
+          <ellipse cx="50" cy="70" rx="20" ry="22" fill={bellyColor} />
+
+          {/* Head */}
+          <ellipse cx="50" cy="32" rx="22" ry="18" fill={bodyColor} />
+
+          {/* Eyes */}
+          <circle cx="40" cy="28" r="8" fill="white" />
+          <circle cx="60" cy="28" r="8" fill="white" />
+          {isHappy ? (
+            <>
+              <circle cx="41" cy="27" r="4.5" fill="#222" />
+              <circle cx="61" cy="27" r="4.5" fill="#222" />
+              <circle cx="42.5" cy="25.5" r="1.5" fill="white" />
+              <circle cx="62.5" cy="25.5" r="1.5" fill="white" />
+            </>
+          ) : isAngry ? (
+            <>
+              <circle cx="40" cy="29" r="4" fill="#222" />
+              <circle cx="60" cy="29" r="4" fill="#222" />
+              {/* Angry eyebrows */}
+              <line x1="32" y1="20" x2="44" y2="23" stroke="#222" strokeWidth="2.5" strokeLinecap="round" />
+              <line x1="68" y1="20" x2="56" y2="23" stroke="#222" strokeWidth="2.5" strokeLinecap="round" />
+            </>
+          ) : (
+            <>
+              <circle cx="41" cy="28" r="4" fill="#222" />
+              <circle cx="61" cy="28" r="4" fill="#222" />
+              <circle cx="42" cy="26.5" r="1.3" fill="white" />
+              <circle cx="62" cy="26.5" r="1.3" fill="white" />
+            </>
+          )}
+
+          {/* Mouth */}
+          {isHappy ? (
+            <path d="M 38 40 Q 50 52 62 40" fill="none" stroke="#222" strokeWidth="2.5" strokeLinecap="round" />
+          ) : isAngry ? (
+            <path d="M 40 44 Q 50 38 60 44" fill="none" stroke="#222" strokeWidth="2" strokeLinecap="round" />
+          ) : (
+            <path d="M 40 41 Q 50 47 60 41" fill="none" stroke="#222" strokeWidth="2" strokeLinecap="round" />
+          )}
+
+          {/* Blush when happy */}
+          {isHappy && (
+            <>
+              <circle cx="33" cy="38" r="5" fill="#FF9999" opacity="0.5" />
+              <circle cx="67" cy="38" r="5" fill="#FF9999" opacity="0.5" />
+            </>
+          )}
+
+          {/* Little arms */}
+          <ellipse cx="24" cy="60" rx="6" ry="4" fill={bodyColor} transform="rotate(-20 24 60)" />
+          <ellipse cx="76" cy="60" rx="6" ry="4" fill={bodyColor} transform="rotate(20 76 60)" />
+
+          {/* Feet */}
+          <ellipse cx="36" cy="96" rx="8" ry="4" fill={bodyColor} />
+          <ellipse cx="64" cy="96" rx="8" ry="4" fill={bodyColor} />
+
+          {/* Tail */}
+          <path d="M 75 80 Q 90 85 95 75 Q 98 68 92 65" fill="none" stroke={bodyColor} strokeWidth="5" strokeLinecap="round" />
+
+          {/* Happy stars when served */}
+          {isHappy && (
+            <>
+              <text x="15" y="15" fontSize="14" className="animate-bounce">⭐</text>
+              <text x="75" y="10" fontSize="12" className="animate-bounce">✨</text>
+              <text x="50" y="8" fontSize="10" textAnchor="middle" fontWeight="bold" fill="#4CAF50">¡Gracias!</text>
+              <circle cx="33" cy="38" r="5" fill="#FF9999" opacity="0.5" />
+              <circle cx="67" cy="38" r="5" fill="#FF9999" opacity="0.5" />
+            </>
+          )}
+        </svg>
+      );
+    };
+
+    // Mini drink thought bubble shown above each customer
+    const DrinkBubble = ({ type }) => {
+      if (type === 'coco') {
+        return (
+          <svg viewBox="0 0 70 55" className="w-full h-full">
+            {/* Bubble */}
+            <rect x="2" y="2" rx="12" ry="12" width="66" height="40" fill="white" stroke="#D4A056" strokeWidth="2" />
+            <polygon points="22,42 28,42 25,52" fill="white" stroke="#D4A056" strokeWidth="1.5" />
+            {/* Coconut half */}
+            <ellipse cx="24" cy="22" rx="12" ry="11" fill="#8B4513" />
+            <ellipse cx="24" cy="20" rx="10" ry="8" fill="#A0522D" />
+            <ellipse cx="24" cy="18" rx="7" ry="5" fill="#F5F5DC" />
+            <ellipse cx="24" cy="18" rx="5" ry="3.5" fill="#E0F7FA" opacity="0.7" />
+            {/* Straw */}
+            <rect x="26" y="10" width="2.5" height="14" rx="1" fill="#FF6B6B" />
+            {/* Label */}
+            <text x="48" y="19" textAnchor="middle" fontSize="8" fontWeight="bold" fill="#5D4037">Agua</text>
+            <text x="48" y="29" textAnchor="middle" fontSize="8" fontWeight="bold" fill="#5D4037">de Coco</text>
+          </svg>
+        );
+      }
+      return (
+        <svg viewBox="0 0 70 55" className="w-full h-full">
+          {/* Bubble */}
+          <rect x="2" y="2" rx="12" ry="12" width="66" height="40" fill="white" stroke="#FFB300" strokeWidth="2" />
+          <polygon points="22,42 28,42 25,52" fill="white" stroke="#FFB300" strokeWidth="1.5" />
+          {/* Glass */}
+          <path d="M 14 12 L 16 32 Q 16 34 19 34 L 29 34 Q 32 34 32 32 L 34 12 Z" fill="#FFF9C4" stroke="#FFB300" strokeWidth="1" />
+          <path d="M 15 14 L 17 31 Q 17 33 19 33 L 29 33 Q 31 33 31 31 L 33 14 Z" fill="#FFB74D" opacity="0.85" />
+          <ellipse cx="24" cy="12" rx="10" ry="3" fill="#FFF9C4" stroke="#FFB300" strokeWidth="1" />
+          <ellipse cx="24" cy="12" rx="8" ry="2" fill="#FFB74D" />
+          {/* Mango slice */}
+          <path d="M 31 10 Q 38 7 40 12 Q 38 16 31 14 Z" fill="#FF9800" />
+          {/* Straw */}
+          <rect x="19" y="5" width="2.5" height="12" rx="1" fill="#4CAF50" />
+          {/* Label */}
+          <text x="52" y="19" textAnchor="middle" fontSize="8" fontWeight="bold" fill="#E65100">Agua</text>
+          <text x="52" y="29" textAnchor="middle" fontSize="8" fontWeight="bold" fill="#E65100">de Mango</text>
+        </svg>
+      );
+    };
+
+    // Detailed drink SVG
+    const DrinkSVG = ({ type }) => {
+      if (type === 'coco') {
+        return (
+          <svg viewBox="0 0 80 100" className="w-full h-full">
+            {/* Coconut */}
+            <ellipse cx="40" cy="52" rx="30" ry="28" fill="#8B4513" />
+            <ellipse cx="40" cy="50" rx="28" ry="26" fill="#A0522D" />
+            {/* Coconut texture dots */}
+            <circle cx="32" cy="42" r="3" fill="#6B3410" />
+            <circle cx="42" cy="40" r="2.5" fill="#6B3410" />
+            <circle cx="48" cy="44" r="2" fill="#6B3410" />
+            {/* Cut top showing white inside */}
+            <ellipse cx="40" cy="35" rx="20" ry="10" fill="#F5F5DC" />
+            <ellipse cx="40" cy="34" rx="18" ry="8" fill="white" />
+            {/* Water inside */}
+            <ellipse cx="40" cy="35" rx="15" ry="6" fill="#E0F7FA" opacity="0.7" />
+            {/* Straw */}
+            <rect x="44" y="8" width="4" height="35" rx="2" fill="#FF6B6B" />
+            <rect x="42" y="6" width="8" height="5" rx="2" fill="#FF6B6B" />
+            {/* Little umbrella */}
+            <path d="M 35 12 Q 28 8 24 14" fill="#FFD700" stroke="#FFA500" strokeWidth="1" />
+            <line x1="35" y1="12" x2="35" y2="22" stroke="#8B4513" strokeWidth="1.5" />
+            {/* Sparkle */}
+            <text x="60" y="25" fontSize="10">✨</text>
+            {/* Label */}
+            <text x="40" y="90" textAnchor="middle" fontSize="11" fontWeight="bold" fill="#5D4037">Agua de Coco</text>
+          </svg>
+        );
+      }
+      return (
+        <svg viewBox="0 0 80 100" className="w-full h-full">
+          {/* Glass */}
+          <path d="M 20 25 L 24 75 Q 24 80 30 80 L 50 80 Q 56 80 56 75 L 60 25 Z" fill="#FFF9C4" stroke="#FFB300" strokeWidth="1.5" />
+          {/* Mango juice */}
+          <path d="M 22 32 L 25 72 Q 25 77 30 77 L 50 77 Q 55 77 55 72 L 58 32 Z" fill="#FFB74D" opacity="0.9" />
+          {/* Juice highlight */}
+          <path d="M 26 35 L 27 55 Q 28 58 32 58 L 35 58 L 36 35 Z" fill="#FFCC80" opacity="0.5" />
+          {/* Glass rim */}
+          <ellipse cx="40" cy="25" rx="20" ry="5" fill="#FFF9C4" stroke="#FFB300" strokeWidth="1.5" />
+          <ellipse cx="40" cy="25" rx="17" ry="3.5" fill="#FFB74D" />
+          {/* Mango slice on rim */}
+          <path d="M 55 20 Q 65 15 68 22 Q 65 28 55 25 Z" fill="#FF9800" />
+          <path d="M 56 21 Q 63 17 65 22 Q 63 26 56 24 Z" fill="#FFB74D" />
+          {/* Straw */}
+          <rect x="32" y="5" width="4" height="28" rx="2" fill="#4CAF50" />
+          <rect x="30" y="3" width="8" height="5" rx="2" fill="#4CAF50" />
+          {/* Ice cubes suggestion */}
+          <rect x="34" y="38" width="8" height="7" rx="2" fill="white" opacity="0.4" />
+          <rect x="44" y="45" width="7" height="6" rx="2" fill="white" opacity="0.3" />
+          {/* Sparkle */}
+          <text x="62" y="12" fontSize="10">✨</text>
+          {/* Label */}
+          <text x="40" y="95" textAnchor="middle" fontSize="11" fontWeight="bold" fill="#E65100">Agua de Mango</text>
+        </svg>
+      );
+    };
+
+    const Game6AguaDeCoco = ({ isPaused, onGameEnd }) => {
+      const [gameState, setGameState] = useState('intro'); // intro, playing, ended
+      const [score, setScore] = useState(0);
+      const [lives, setLives] = useState(3);
+      const [customers, setCustomers] = useState([]);
+      const [happyCustomers, setHappyCustomers] = useState([]); // Customers being served (happy animation)
+      const [timeLeft, setTimeLeft] = useState(60);
+      const [speed, setSpeed] = useState(3000);
+      const [combo, setCombo] = useState(0);
+      const [floatingTexts, setFloatingTexts] = useState([]);
+      const gameRef = useRef(null);
+      const customerIdRef = useRef(0);
+      const floatIdRef = useRef(0);
+
+      // Customer types
+      const customerTypes = [
+        { type: 'coco', color: 'from-amber-50 to-amber-100', border: 'border-amber-300', want: '¡Agua de coco!' },
+        { type: 'mango', color: 'from-yellow-50 to-yellow-100', border: 'border-yellow-300', want: '¡Agua de mango!' },
+      ];
+
+      // Lizard names for variety
+      const lizardNames = ['Pepe', 'Lola', 'Tito', 'Rosa', 'Paco', 'Lily', 'Beto', 'Ana', 'Chuy', 'Toña'];
+
+      // Start game
+      const startGame = () => {
+        setGameState('playing');
+        setScore(0);
+        setLives(3);
+        setTimeLeft(60);
+        setSpeed(3000);
+        setCustomers([]);
+        setHappyCustomers([]);
+        setCombo(0);
+        setFloatingTexts([]);
+      };
+
+      // Add floating text
+      const addFloatingText = (text, x, y, color) => {
+        const id = floatIdRef.current++;
+        setFloatingTexts(prev => [...prev, { id, text, x, y, color }]);
+        setTimeout(() => {
+          setFloatingTexts(prev => prev.filter(f => f.id !== id));
+        }, 1000);
+      };
+
+      // Add new customer
+      useEffect(() => {
+        if (gameState !== 'playing' || isPaused) return;
+
+        const addCustomer = () => {
+          const type = customerTypes[Math.floor(Math.random() * customerTypes.length)];
+          const name = lizardNames[Math.floor(Math.random() * lizardNames.length)];
+          const newCustomer = {
+            id: customerIdRef.current++,
+            ...type,
+            name,
+            patience: 100,
+            entering: true,
+          };
+          setCustomers(prev => [...prev.slice(-4), newCustomer]);
+          // Remove entering animation
+          setTimeout(() => {
+            setCustomers(prev => prev.map(c => c.id === newCustomer.id ? { ...c, entering: false } : c));
+          }, 300);
+        };
+
+        addCustomer();
+        const interval = setInterval(addCustomer, speed);
+        return () => clearInterval(interval);
+      }, [gameState, isPaused, speed]);
+
+      // Timer countdown
+      useEffect(() => {
+        if (gameState !== 'playing' || isPaused) return;
+
+        const timer = setInterval(() => {
+          setTimeLeft(prev => {
+            if (prev <= 1) {
+              setGameState('ended');
+              return 0;
+            }
+            return prev - 1;
+          });
+        }, 1000);
+
+        return () => clearInterval(timer);
+      }, [gameState, isPaused]);
+
+      // Customer patience decay
+      useEffect(() => {
+        if (gameState !== 'playing' || isPaused) return;
+
+        const decay = setInterval(() => {
+          setCustomers(prev => {
+            const updated = prev.map(c => ({ ...c, patience: c.patience - 4 }));
+            const expired = updated.filter(c => c.patience <= 0);
+
+            if (expired.length > 0) {
+              setCombo(0);
+              setLives(l => {
+                const newLives = l - expired.length;
+                if (newLives <= 0) {
+                  setGameState('ended');
+                }
+                return Math.max(0, newLives);
+              });
+            }
+
+            return updated.filter(c => c.patience > 0);
+          });
+        }, 500);
+
+        return () => clearInterval(decay);
+      }, [gameState, isPaused]);
+
+      // Increase speed over time
+      useEffect(() => {
+        if (gameState !== 'playing' || isPaused) return;
+
+        const speedUp = setInterval(() => {
+          setSpeed(prev => Math.max(1500, prev - 100));
+        }, 5000);
+
+        return () => clearInterval(speedUp);
+      }, [gameState, isPaused]);
+
+      // Clean up happy customers
+      useEffect(() => {
+        if (happyCustomers.length === 0) return;
+        const timeout = setTimeout(() => {
+          setHappyCustomers(prev => prev.slice(1));
+        }, 800);
+        return () => clearTimeout(timeout);
+      }, [happyCustomers]);
+
+      // Serve drink
+      const serveDrink = (drinkType) => {
+        if (gameState !== 'playing' || isPaused) return;
+
+        const customerIndex = customers.findIndex(c => c.type === drinkType);
+
+        if (customerIndex !== -1) {
+          const served = customers[customerIndex];
+          const newCombo = combo + 1;
+          const comboBonus = newCombo >= 3 ? newCombo * 5 : 0;
+          const points = 10 + comboBonus;
+
+          setCombo(newCombo);
+          setScore(prev => prev + points);
+
+          // Add to happy customers for animation
+          setHappyCustomers(prev => [...prev, { ...served, status: 'happy' }]);
+
+          // Floating score text
+          addFloatingText(
+            comboBonus > 0 ? `+${points} COMBO x${newCombo}!` : `+${points}`,
+            50, 50,
+            comboBonus > 0 ? '#FF6B00' : '#4CAF50'
+          );
+
+          setCustomers(prev => prev.filter((_, i) => i !== customerIndex));
+        } else if (customers.length > 0) {
+          // Wrong serve
+          setCombo(0);
+          addFloatingText('¡Incorrecto!', 50, 50, '#F44336');
+          setLives(prev => {
+            const newLives = prev - 1;
+            if (newLives <= 0) {
+              setGameState('ended');
+            }
+            return Math.max(0, newLives);
+          });
+        }
+      };
+
+      // Calculate stars
+      const getStars = () => {
+        if (score >= 200) return 3;
+        if (score >= 100) return 2;
+        if (score >= 50) return 1;
+        return 0;
+      };
+
+      // Intro screen
+      if (gameState === 'intro') {
+        return (
+          <GameIntroScreen
+            game={games[5]}
+            instructions="¡Sirve agua de coco 🥥 o mango 🥭 a los clientes! Mira lo que piden y toca el botón correcto antes de que se vayan."
+            onStart={startGame}
+          />
+        );
+      }
+
+      // End screen
+      if (gameState === 'ended') {
+        return (
+          <GameEndScreen
+            score={score}
+            stars={getStars()}
+            message={score >= 200 ? '¡Vendedor estrella!' : score >= 100 ? '¡Muy bien!' : '¡Buen intento!'}
+            onRestart={startGame}
+            onExit={onGameEnd}
+          />
+        );
+      }
+
+      // Patience bar color
+      const patienceColor = (p) => {
+        if (p > 60) return 'bg-green-400';
+        if (p > 30) return 'bg-yellow-400';
+        return 'bg-red-400';
+      };
+
+      // Playing
+      return (
+        <div ref={gameRef} className="h-full flex flex-col bg-gradient-to-b from-amber-200 via-orange-100 to-orange-200 relative overflow-hidden">
+          {/* Floating score texts */}
+          {floatingTexts.map(ft => (
+            <div
+              key={ft.id}
+              className="absolute pointer-events-none z-30 font-bold text-xl animate-bounce"
+              style={{
+                left: `${ft.x}%`,
+                top: `${ft.y}%`,
+                color: ft.color,
+                transform: 'translate(-50%, -50%)',
+                animation: 'floatUp 1s ease-out forwards',
+              }}
+            >
+              {ft.text}
+            </div>
+          ))}
+
+          {/* Stats bar */}
+          <div className="flex justify-between items-center p-3 bg-white/60 backdrop-blur-sm border-b border-amber-200">
+            <div className="flex gap-1">
+              {[...Array(3)].map((_, i) => (
+                <span key={i} className={`text-xl transition-all ${i < lives ? 'scale-100' : 'scale-75 grayscale opacity-30'}`}>❤️</span>
+              ))}
+            </div>
+            <div className="flex items-center gap-3">
+              {combo >= 3 && (
+                <span className="text-sm font-bold text-orange-600 animate-pulse">
+                  COMBO x{combo}!
+                </span>
+              )}
+              <span className="text-xl font-bold">⭐ {score}</span>
+            </div>
+            <div className={`text-xl font-bold ${timeLeft <= 10 ? 'text-red-500 animate-pulse' : ''}`}>
+              ⏱️ {timeLeft}s
+            </div>
+          </div>
+
+          {/* Store counter / scene */}
+          <div className="bg-amber-800/20 px-3 py-2 text-center">
+            <div className="flex items-center justify-center gap-2">
+              <span className="text-lg">🏪</span>
+              <span className="font-bold text-amber-900">Puesto de Coco y Mango</span>
+              <span className="text-lg">🌴</span>
+            </div>
+          </div>
+
+          {/* Customer area */}
+          <div className="flex-1 flex flex-col p-3 overflow-hidden">
+            {/* Happy served customers (floating away) */}
+            {happyCustomers.length > 0 && (
+              <div className="absolute top-20 left-0 right-0 z-20 flex justify-center pointer-events-none">
+                {happyCustomers.map(hc => (
+                  <div key={hc.id} className="w-20 h-24" style={{ animation: 'floatUp 0.8s ease-out forwards' }}>
+                    <LizardCustomer type={hc.type} patience={100} status="happy" />
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Waiting customers */}
+            <div className="bg-white/40 backdrop-blur-sm rounded-2xl p-3 shadow-inner flex-1 flex flex-col">
+              <p className="text-center text-sm mb-2 font-bold text-amber-800">
+                Clientes esperando: {customers.length}
+              </p>
+              <div className="flex-1 flex flex-wrap justify-center items-start gap-2 content-start overflow-hidden">
+                {customers.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center h-full opacity-50">
+                    <span className="text-4xl mb-2">🦎</span>
+                    <p className="text-amber-700">Esperando clientes...</p>
+                  </div>
+                ) : (
+                  customers.map(customer => (
+                    <div
+                      key={customer.id}
+                      className={`bg-gradient-to-b ${customer.color} border-2 ${customer.border} rounded-2xl p-1.5 text-center shadow-md transition-all w-[30%] sm:w-[23%] max-w-[120px]`}
+                      style={{
+                        transform: customer.entering ? 'translateY(20px) scale(0.8)' : 'translateY(0) scale(1)',
+                        opacity: customer.entering ? 0.5 : 1,
+                        animation: customer.patience < 30 ? 'shake 0.3s infinite' : 'none',
+                      }}
+                    >
+                      {/* Drink thought bubble */}
+                      <div className="w-full h-10 sm:h-12 -mb-1">
+                        <DrinkBubble type={customer.type} />
+                      </div>
+                      {/* Lizard face */}
+                      <div className="w-full h-14 sm:h-18">
+                        <LizardCustomer type={customer.type} patience={customer.patience} status="waiting" />
+                      </div>
+                      {/* Name */}
+                      <p className="text-xs font-bold truncate">{customer.name}</p>
+                      {/* Patience bar */}
+                      <div className="w-full bg-gray-200 rounded-full h-2.5 mt-0.5">
+                        <div
+                          className={`${patienceColor(customer.patience)} h-2.5 rounded-full transition-all duration-300`}
+                          style={{ width: `${customer.patience}%` }}
+                        />
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Drink serving buttons */}
+          <div className="p-4 bg-gradient-to-t from-amber-300/80 to-transparent backdrop-blur-sm">
+            <p className="text-center mb-2 font-bold text-amber-900 text-sm">¡Toca para servir!</p>
+            <div className="flex gap-4 justify-center">
+              <button
+                onClick={() => serveDrink('coco')}
+                className="flex-1 max-w-[160px] py-3 bg-gradient-to-b from-amber-300 to-amber-500 hover:from-amber-400 hover:to-amber-600 active:scale-90 rounded-2xl text-center shadow-lg transition-all border-2 border-amber-600"
+              >
+                <div className="w-16 h-16 mx-auto mb-1">
+                  <DrinkSVG type="coco" />
+                </div>
+              </button>
+              <button
+                onClick={() => serveDrink('mango')}
+                className="flex-1 max-w-[160px] py-3 bg-gradient-to-b from-yellow-300 to-yellow-500 hover:from-yellow-400 hover:to-yellow-600 active:scale-90 rounded-2xl text-center shadow-lg transition-all border-2 border-yellow-600"
+              >
+                <div className="w-16 h-16 mx-auto mb-1">
+                  <DrinkSVG type="mango" />
+                </div>
+              </button>
+            </div>
+          </div>
+
+          {/* CSS animations */}
+          <style>{`
+            @keyframes floatUp {
+              0% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+              100% { opacity: 0; transform: translate(-50%, -150%) scale(1.3); }
+            }
+            @keyframes shake {
+              0%, 100% { transform: translateX(0); }
+              25% { transform: translateX(-3px); }
+              75% { transform: translateX(3px); }
+            }
+          `}</style>
+        </div>
+      );
+    };
+
+    // ==================== GAME 1: EL PRIMER DÍA DE CLASES ====================
+
+    // Scared lizard classmates scattered around
+    const ScaredLizard = ({ x, y, panicLevel, name }) => {
+      const isRunning = panicLevel > 70;
+      const isScared = panicLevel > 40;
+      return (
+        <div
+          className="absolute text-center transition-all duration-300"
+          style={{
+            left: `${x}%`,
+            top: `${y}%`,
+            transform: `translate(-50%, -50%) ${isRunning ? 'scale(0.8)' : 'scale(1)'}`,
+            animation: isRunning ? 'shake 0.2s infinite' : isScared ? 'shake 0.5s infinite' : 'none',
+          }}
+        >
+          <svg viewBox="0 0 60 70" className="w-10 h-12 sm:w-12 sm:h-14">
+            <ellipse cx="30" cy="40" rx="16" ry="18" fill="#6B8E23" />
+            <ellipse cx="30" cy="43" rx="11" ry="12" fill="#9ACD32" />
+            <ellipse cx="30" cy="22" rx="13" ry="11" fill="#6B8E23" />
+            <circle cx="24" cy="19" r="5" fill="white" />
+            <circle cx="36" cy="19" r="5" fill="white" />
+            {isScared ? (
+              <>
+                <circle cx="24" cy="19" r="3.5" fill="#222" />
+                <circle cx="36" cy="19" r="3.5" fill="#222" />
+                <ellipse cx="30" cy="30" rx="4" ry="5" fill="#222" />
+              </>
+            ) : (
+              <>
+                <circle cx="24.5" cy="19" r="2.5" fill="#222" />
+                <circle cx="36.5" cy="19" r="2.5" fill="#222" />
+                <path d="M 24 28 Q 30 33 36 28" fill="none" stroke="#222" strokeWidth="1.5" strokeLinecap="round" />
+              </>
+            )}
+          </svg>
+          <p className="text-[8px] sm:text-[10px] font-bold">{name}</p>
+        </div>
+      );
+    };
+
+    const Game1PrimerDia = ({ isPaused, onGameEnd }) => {
+      const [gameState, setGameState] = useState('intro');
+      const [panicLevel, setPanicLevel] = useState(0); // 0-100, lose if reaches 100
+      const [calmPresses, setCalmPresses] = useState(0);
+      const [timeLeft, setTimeLeft] = useState(45);
+      const [thunderActive, setThunderActive] = useState(false);
+      const [screenFlash, setScreenFlash] = useState(false);
+      const [thunderCount, setThunderCount] = useState(0);
+      const [mangoTip, setMangoTip] = useState('');
+      const [showMangoTip, setShowMangoTip] = useState(false);
+      const [cocoState, setCocoState] = useState('normal'); // normal, scared, calming
+      const [score, setScore] = useState(0);
+      const [classmates, setClassmates] = useState([
+        { name: 'Diego', x: 15, y: 30 },
+        { name: 'Rosita', x: 80, y: 25 },
+        { name: 'Luis', x: 25, y: 65 },
+        { name: 'Lola', x: 75, y: 60 },
+        { name: 'Pepe', x: 50, y: 25 },
+      ]);
+
+      const mangoTips = [
+        '¡Tranquilos! Solo fue un ruido.',
+        'Eso no fue un rayo, fue un coche.',
+        '¡Respira profundo, Coco!',
+        'No pasa nada, estamos seguros.',
+        'Escuchen bien antes de asustarse.',
+        '¡Calma! La maestra está aquí.',
+        'Si fuera un rayo, lo veríamos.',
+      ];
+
+      const startGame = () => {
+        setGameState('playing');
+        setPanicLevel(20);
+        setCalmPresses(0);
+        setTimeLeft(45);
+        setThunderCount(0);
+        setScore(0);
+        setCocoState('normal');
+      };
+
+      // Thunder events - random thunder strikes that raise panic
+      useEffect(() => {
+        if (gameState !== 'playing' || isPaused) return;
+
+        const triggerThunder = () => {
+          const delay = 2500 + Math.random() * 4000; // Random 2.5-6.5s
+          const timeout = setTimeout(() => {
+            if (gameState !== 'playing') return;
+
+            setThunderActive(true);
+            setScreenFlash(true);
+            setThunderCount(prev => prev + 1);
+            setCocoState('scared');
+
+            // Panic spike
+            setPanicLevel(prev => Math.min(100, prev + 15 + Math.floor(Math.random() * 10)));
+
+            // Flash effect
+            setTimeout(() => setScreenFlash(false), 150);
+            setTimeout(() => {
+              setScreenFlash(true);
+              setTimeout(() => setScreenFlash(false), 100);
+            }, 300);
+
+            // Thunder fades
+            setTimeout(() => setThunderActive(false), 1500);
+
+            // Mango gives a tip
+            const tip = mangoTips[Math.floor(Math.random() * mangoTips.length)];
+            setMangoTip(tip);
+            setShowMangoTip(true);
+            setTimeout(() => setShowMangoTip(false), 3000);
+
+            triggerThunder(); // Schedule next
+          }, delay);
+
+          return timeout;
+        };
+
+        const timeout = triggerThunder();
+        return () => clearTimeout(timeout);
+      }, [gameState, isPaused]);
+
+      // Passive panic increase (anxiety builds)
+      useEffect(() => {
+        if (gameState !== 'playing' || isPaused) return;
+
+        const interval = setInterval(() => {
+          setPanicLevel(prev => {
+            const newLevel = Math.min(100, prev + 1);
+            if (newLevel >= 100) {
+              setGameState('ended');
+            }
+            return newLevel;
+          });
+        }, 800);
+
+        return () => clearInterval(interval);
+      }, [gameState, isPaused]);
+
+      // Timer
+      useEffect(() => {
+        if (gameState !== 'playing' || isPaused) return;
+
+        const timer = setInterval(() => {
+          setTimeLeft(prev => {
+            if (prev <= 1) {
+              setGameState('ended');
+              return 0;
+            }
+            return prev - 1;
+          });
+        }, 1000);
+
+        return () => clearInterval(timer);
+      }, [gameState, isPaused]);
+
+      // Tap to calm Coco
+      const calmDown = () => {
+        if (gameState !== 'playing' || isPaused) return;
+
+        setCalmPresses(prev => prev + 1);
+        setPanicLevel(prev => Math.max(0, prev - 8));
+        setScore(prev => prev + 5);
+        setCocoState('calming');
+        setTimeout(() => setCocoState(panicLevel > 50 ? 'scared' : 'normal'), 400);
+      };
+
+      const getStars = () => {
+        if (panicLevel >= 100) return 0; // Lost
+        if (timeLeft <= 0 && panicLevel < 100) {
+          if (panicLevel < 20) return 3;
+          if (panicLevel < 50) return 2;
+          return 1;
+        }
+        if (score >= 150) return 3;
+        if (score >= 80) return 2;
+        if (score >= 30) return 1;
+        return 0;
+      };
+
+      const getMessage = () => {
+        if (panicLevel >= 100) return '¡Coco entró en pánico!';
+        if (timeLeft <= 0 && panicLevel < 30) return '¡La clase puede empezar!';
+        if (timeLeft <= 0) return '¡Sobreviviste la tormenta!';
+        return '¡Buen intento!';
+      };
+
+      // Sky color based on panic/thunder
+      const skyGradient = thunderActive
+        ? 'from-gray-800 via-gray-700 to-gray-600'
+        : panicLevel > 60
+        ? 'from-gray-600 via-gray-500 to-green-800'
+        : panicLevel > 30
+        ? 'from-gray-400 via-blue-300 to-green-700'
+        : 'from-blue-400 via-blue-300 to-green-600';
+
+      if (gameState === 'intro') {
+        return (
+          <GameIntroScreen
+            game={games[0]}
+            instructions="¡Truenos asustan a las lagartijas! Toca a Coco rápido para calmarlo. ¡No dejes que el pánico llegue al máximo!"
+            onStart={startGame}
+          />
+        );
+      }
+
+      if (gameState === 'ended') {
+        return (
+          <GameEndScreen
+            score={score}
+            stars={getStars()}
+            message={getMessage()}
+            onRestart={startGame}
+            onExit={onGameEnd}
+          />
+        );
+      }
+
+      return (
+        <div className={`h-full flex flex-col bg-gradient-to-b ${skyGradient} relative overflow-hidden transition-all duration-500`}>
+          {/* Lightning flash overlay */}
+          {screenFlash && (
+            <div className="absolute inset-0 bg-white/80 z-40 pointer-events-none" />
+          )}
+
+          {/* Stats bar */}
+          <div className="flex justify-between items-center p-3 bg-black/30 text-white z-10">
+            <div className="text-lg font-bold">⭐ {score}</div>
+            <div className="text-lg font-bold">Truenos: {thunderCount}</div>
+            <div className={`text-lg font-bold ${timeLeft <= 10 ? 'text-red-300 animate-pulse' : ''}`}>
+              ⏱️ {timeLeft}s
+            </div>
+          </div>
+
+          {/* Panic meter */}
+          <div className="px-4 py-2 z-10">
+            <div className="flex items-center gap-2">
+              <span className="text-white text-sm font-bold">PÁNICO:</span>
+              <div className="flex-1 bg-black/30 rounded-full h-5 overflow-hidden border border-white/30">
+                <div
+                  className={`h-full rounded-full transition-all duration-300 ${
+                    panicLevel > 70 ? 'bg-red-500' : panicLevel > 40 ? 'bg-yellow-400' : 'bg-green-400'
+                  }`}
+                  style={{ width: `${panicLevel}%` }}
+                />
+              </div>
+              <span className="text-white text-sm font-bold w-10 text-right">{Math.round(panicLevel)}%</span>
+            </div>
+            {panicLevel > 70 && (
+              <p className="text-red-300 text-xs text-center mt-1 animate-pulse font-bold">
+                ¡¡CUIDADO!! ¡Coco está muy asustado!
+              </p>
+            )}
+          </div>
+
+          {/* Scene: outdoor school under tree */}
+          <div className="flex-1 relative">
+            {/* Tree */}
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[80%] sm:w-[60%]">
+              <svg viewBox="0 0 200 100" className="w-full">
+                {/* Tree trunk */}
+                <rect x="90" y="60" width="20" height="50" rx="4" fill="#5D4037" />
+                {/* Canopy */}
+                <ellipse cx="100" cy="40" rx="80" ry="40" fill="#2E7D32" opacity="0.8" />
+                <ellipse cx="70" cy="35" rx="50" ry="30" fill="#388E3C" opacity="0.7" />
+                <ellipse cx="130" cy="35" rx="50" ry="30" fill="#388E3C" opacity="0.7" />
+                <ellipse cx="100" cy="30" rx="60" ry="28" fill="#43A047" opacity="0.6" />
+              </svg>
+            </div>
+
+            {/* Scattered classmates */}
+            {classmates.map((c, i) => (
+              <ScaredLizard key={i} x={c.x} y={c.y} panicLevel={panicLevel} name={c.name} />
+            ))}
+
+            {/* Lightning bolts during thunder */}
+            {thunderActive && (
+              <>
+                <svg className="absolute top-0 left-[20%] w-12 h-24 z-20 animate-pulse" viewBox="0 0 40 80">
+                  <polygon points="20,0 8,35 18,35 5,80 35,30 22,30 35,0" fill="#FFD600" stroke="#FFA000" strokeWidth="1" />
+                </svg>
+                <svg className="absolute top-2 right-[15%] w-10 h-20 z-20 animate-pulse" viewBox="0 0 40 80">
+                  <polygon points="20,0 8,35 18,35 5,80 35,30 22,30 35,0" fill="#FFD600" stroke="#FFA000" strokeWidth="1" opacity="0.7" />
+                </svg>
+              </>
+            )}
+
+            {/* COCO - main tappable character */}
+            <button
+              onClick={calmDown}
+              className="absolute bottom-[15%] left-1/2 -translate-x-1/2 z-30 focus:outline-none active:scale-90 transition-transform"
+              style={{
+                animation: cocoState === 'scared' ? 'shake 0.15s infinite' : cocoState === 'calming' ? 'pulse 0.3s' : 'none',
+              }}
+            >
+              <div className="relative">
+                <svg viewBox="0 0 100 120" className="w-24 h-28 sm:w-28 sm:h-32">
+                  {/* Body */}
+                  <ellipse cx="50" cy="65" rx="28" ry="32" fill="#4CAF50" />
+                  <ellipse cx="50" cy="70" rx="20" ry="22" fill="#81C784" />
+                  {/* Head */}
+                  <ellipse cx="50" cy="32" rx="22" ry="18" fill="#4CAF50" />
+                  {/* Eyes */}
+                  <circle cx="40" cy="28" r="8" fill="white" />
+                  <circle cx="60" cy="28" r="8" fill="white" />
+                  {cocoState === 'scared' ? (
+                    <>
+                      {/* Big scared eyes */}
+                      <circle cx="40" cy="28" r="6" fill="#222" />
+                      <circle cx="60" cy="28" r="6" fill="#222" />
+                      <circle cx="42" cy="26" r="2" fill="white" />
+                      <circle cx="62" cy="26" r="2" fill="white" />
+                      {/* Scared mouth */}
+                      <ellipse cx="50" cy="42" rx="6" ry="7" fill="#222" />
+                      {/* Sweat drop */}
+                      <path d="M 70 20 Q 73 15 74 22 Q 73 26 70 20" fill="#4FC3F7" />
+                    </>
+                  ) : cocoState === 'calming' ? (
+                    <>
+                      {/* Calm/relieved eyes */}
+                      <path d="M 34 28 Q 40 24 46 28" fill="none" stroke="#222" strokeWidth="2.5" strokeLinecap="round" />
+                      <path d="M 54 28 Q 60 24 66 28" fill="none" stroke="#222" strokeWidth="2.5" strokeLinecap="round" />
+                      {/* Peaceful smile */}
+                      <path d="M 40 40 Q 50 48 60 40" fill="none" stroke="#222" strokeWidth="2" strokeLinecap="round" />
+                      {/* Sparkles */}
+                      <text x="15" y="18" fontSize="10">✨</text>
+                      <text x="78" y="18" fontSize="10">✨</text>
+                    </>
+                  ) : (
+                    <>
+                      <circle cx="41" cy="28" r="4.5" fill="#222" />
+                      <circle cx="61" cy="28" r="4.5" fill="#222" />
+                      <circle cx="42.5" cy="26" r="1.5" fill="white" />
+                      <circle cx="62.5" cy="26" r="1.5" fill="white" />
+                      <path d="M 40 40 Q 50 46 60 40" fill="none" stroke="#222" strokeWidth="2" strokeLinecap="round" />
+                    </>
+                  )}
+                  {/* Backpack */}
+                  <rect x="18" y="50" width="14" height="18" rx="4" fill="#FF9800" />
+                  <rect x="20" y="52" width="10" height="6" rx="2" fill="#FFB74D" />
+                  {/* Arms */}
+                  <ellipse cx="24" cy="60" rx="6" ry="4" fill="#4CAF50" transform="rotate(-20 24 60)" />
+                  <ellipse cx="76" cy="60" rx="6" ry="4" fill="#4CAF50" transform="rotate(20 76 60)" />
+                  {/* Feet */}
+                  <ellipse cx="36" cy="96" rx="8" ry="4" fill="#4CAF50" />
+                  <ellipse cx="64" cy="96" rx="8" ry="4" fill="#4CAF50" />
+                  {/* Spiky back */}
+                  <polygon points="42,34 45,28 48,34" fill="#388E3C" />
+                  <polygon points="48,33 51,27 54,33" fill="#388E3C" />
+                  <polygon points="54,34 57,28 60,34" fill="#388E3C" />
+                </svg>
+
+                {/* Tap indicator ring */}
+                <div className={`absolute inset-0 rounded-full border-4 ${
+                  panicLevel > 60 ? 'border-red-400 animate-ping' : 'border-green-300 animate-pulse'
+                } opacity-50`} />
+
+                {/* Name label */}
+                <p className="text-center font-bold text-white text-sm bg-black/40 rounded-full px-3 py-0.5 mt-1">
+                  ¡Toca a Coco!
+                </p>
+              </div>
+            </button>
+
+            {/* MANGO - calm friend with tip */}
+            <div className="absolute bottom-[15%] right-[8%] z-20">
+              <svg viewBox="0 0 80 100" className="w-16 h-20 sm:w-20 sm:h-24">
+                {/* Body */}
+                <ellipse cx="40" cy="55" rx="20" ry="24" fill="#FF8F00" />
+                <ellipse cx="40" cy="58" rx="14" ry="16" fill="#FFB74D" />
+                {/* Head */}
+                <ellipse cx="40" cy="28" rx="16" ry="14" fill="#FF8F00" />
+                {/* Eyes - always calm */}
+                <circle cx="33" cy="25" r="5.5" fill="white" />
+                <circle cx="47" cy="25" r="5.5" fill="white" />
+                <circle cx="34" cy="25" r="3" fill="#222" />
+                <circle cx="48" cy="25" r="3" fill="#222" />
+                <circle cx="35" cy="23.5" r="1" fill="white" />
+                <circle cx="49" cy="23.5" r="1" fill="white" />
+                {/* Calm confident smile */}
+                <path d="M 32 34 Q 40 42 48 34" fill="none" stroke="#222" strokeWidth="2" strokeLinecap="round" />
+                {/* Arms */}
+                <ellipse cx="22" cy="50" rx="5" ry="3" fill="#FF8F00" transform="rotate(-20 22 50)" />
+                <ellipse cx="58" cy="50" rx="5" ry="3" fill="#FF8F00" transform="rotate(20 58 50)" />
+                {/* Feet */}
+                <ellipse cx="30" cy="78" rx="6" ry="3" fill="#FF8F00" />
+                <ellipse cx="50" cy="78" rx="6" ry="3" fill="#FF8F00" />
+              </svg>
+
+              {/* Mango speech bubble with tip */}
+              {showMangoTip && (
+                <div className="absolute -top-16 -left-20 sm:-left-24 w-40 sm:w-48 bg-white rounded-xl p-2 shadow-lg border-2 border-orange-300 z-30"
+                  style={{ animation: 'fadeIn 0.3s ease-out' }}
+                >
+                  <p className="text-xs sm:text-sm font-bold text-amber-800">{mangoTip}</p>
+                  <div className="absolute bottom-[-8px] right-8 w-4 h-4 bg-white border-r-2 border-b-2 border-orange-300 transform rotate-45" />
+                </div>
+              )}
+              <p className="text-center font-bold text-white text-xs bg-orange-500/70 rounded-full px-2 py-0.5">
+                Mango
+              </p>
+            </div>
+
+            {/* Ground / flowers */}
+            <div className="absolute bottom-0 left-0 right-0 h-[10%] bg-gradient-to-t from-green-800 to-green-700">
+              <div className="flex justify-around pt-1">
+                <span className="text-sm">🌸</span>
+                <span className="text-sm">🌼</span>
+                <span className="text-sm">🌺</span>
+                <span className="text-sm">🌸</span>
+                <span className="text-sm">🌼</span>
+                <span className="text-sm">🌺</span>
+                <span className="text-sm">🌸</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Thunder sound text */}
+          {thunderActive && (
+            <div className="absolute top-1/4 left-1/2 -translate-x-1/2 z-40 pointer-events-none">
+              <p className="text-4xl sm:text-5xl font-bold text-yellow-300 animate-bounce"
+                style={{ textShadow: '2px 2px 4px rgba(0,0,0,0.8)' }}>
+                ¡¡PUUUUM!!
+              </p>
+            </div>
+          )}
+
+          {/* CSS animations */}
+          <style>{`
+            @keyframes pulse {
+              0%, 100% { transform: translate(-50%, 0) scale(1); }
+              50% { transform: translate(-50%, 0) scale(1.1); }
+            }
+            @keyframes fadeIn {
+              from { opacity: 0; transform: translateY(5px); }
+              to { opacity: 1; transform: translateY(0); }
+            }
+          `}</style>
+        </div>
+      );
+    };
+
+    // ==================== PLACEHOLDER FOR OTHER GAMES ====================
+
+    const ComingSoonGame = ({ game, onClose }) => (
+      <div className="h-full flex flex-col items-center justify-center bg-gradient-to-b from-gray-700 to-gray-900 text-white p-6">
+        <p className="text-6xl mb-4">{game.emoji}</p>
+        <h2 className="text-2xl font-bold mb-2">{game.title}</h2>
+        <p className="text-xl opacity-70 mb-6">¡Próximamente!</p>
+        <button
+          onClick={onClose}
+          className="px-6 py-3 bg-white text-gray-800 rounded-full font-bold hover:bg-gray-200"
+        >
+          Volver
+        </button>
+      </div>
+    );
+
+    // ==================== GAME CARD ====================
+
+    const GameCard = ({ game, progress, onPlay }) => {
+      const imgNum = String(game.id).padStart(2, '0');
+
+      return (
+        <div
+          className="game-card bg-white rounded-2xl overflow-hidden shadow-lg cursor-pointer"
+          onClick={onPlay}
+        >
+          <div className="relative">
+            <img
+              src={`imagenes/imagen${imgNum}.png`}
+              alt={game.title}
+              className="w-full h-32 sm:h-40 object-cover"
+            />
+            <div className={`absolute top-2 right-2 w-10 h-10 rounded-full bg-gradient-to-br ${game.color} flex items-center justify-center text-xl shadow`}>
+              {game.emoji}
+            </div>
+            {progress?.stars > 0 && (
+              <div className="absolute bottom-2 left-2 bg-black/50 rounded-full px-2 py-1">
+                <StarRating stars={progress.stars} />
+              </div>
+            )}
+          </div>
+          <div className="p-3">
+            <h3 className="font-bold text-sm sm:text-base truncate">{game.title}</h3>
+            <p className="text-xs text-gray-500">{game.type}</p>
+            <button className="play-btn w-full mt-2 py-2 text-white rounded-full font-bold text-sm">
+              ▶ Jugar
+            </button>
+          </div>
+        </div>
+      );
+    };
+
+    // ==================== MAIN APP ====================
+
+    const GamesApp = () => {
+      const [currentGame, setCurrentGame] = useState(() => {
+        // Check URL hash for direct game launch (e.g. juegos.html#game6)
+        const hash = window.location.hash;
+        const match = hash.match(/^#game(\d+)$/);
+        return match ? parseInt(match[1]) : null;
+      });
+      const [progress, setProgress] = useState(() => {
+        const saved = localStorage.getItem('cocoMangoGamesProgress');
+        return saved ? JSON.parse(saved) : {};
+      });
+
+      // Save progress
+      useEffect(() => {
+        localStorage.setItem('cocoMangoGamesProgress', JSON.stringify(progress));
+      }, [progress]);
+
+      const handleGameEnd = (gameId, stars, score) => {
+        if (stars !== undefined) {
+          setProgress(prev => ({
+            ...prev,
+            [gameId]: {
+              stars: Math.max(prev[gameId]?.stars || 0, stars),
+              highScore: Math.max(prev[gameId]?.highScore || 0, score || 0),
+            }
+          }));
+        }
+        setCurrentGame(null);
+      };
+
+      // Render active game
+      if (currentGame) {
+        const game = games.find(g => g.id === currentGame);
+
+        // Implemented games
+        if (currentGame === 1) {
+          return (
+            <GameWrapper game={game} onClose={() => setCurrentGame(null)}>
+              <Game1PrimerDia onGameEnd={() => handleGameEnd(1)} />
+            </GameWrapper>
+          );
+        }
+
+        if (currentGame === 6) {
+          return (
+            <GameWrapper game={game} onClose={() => setCurrentGame(null)}>
+              <Game6AguaDeCoco onGameEnd={() => handleGameEnd(6)} />
+            </GameWrapper>
+          );
+        }
+
+        // Other games show coming soon
+        return (
+          <GameWrapper game={game} onClose={() => setCurrentGame(null)}>
+            <ComingSoonGame game={game} onClose={() => setCurrentGame(null)} />
+          </GameWrapper>
+        );
+      }
+
+      // Games hub
+      return (
+        <div className="min-h-screen pb-8">
+          {/* Header */}
+          <header className="bg-gradient-to-r from-green-500 to-emerald-600 text-white p-4 shadow-lg">
+            <div className="max-w-4xl mx-auto flex items-center justify-between">
+              <div>
+                <h1 className="text-2xl sm:text-3xl font-bold">🎮 Los Juegos de Coco y Mango</h1>
+                <p className="text-sm opacity-90">13 mini-juegos basados en las historias</p>
+              </div>
+              <a
+                href="index.html"
+                className="p-2 bg-white/20 hover:bg-white/30 rounded-full"
+                title="Ver historias"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                </svg>
+              </a>
+            </div>
+          </header>
+
+          {/* Games grid */}
+          <main className="max-w-4xl mx-auto p-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+              {games.map(game => (
+                <GameCard
+                  key={game.id}
+                  game={game}
+                  progress={progress[game.id]}
+                  onPlay={() => setCurrentGame(game.id)}
+                />
+              ))}
+            </div>
+          </main>
+
+          {/* Footer */}
+          <footer className="text-center text-gray-500 text-sm mt-8">
+            <a href="index.html" className="hover:text-green-600">📖 Leer las historias</a>
+          </footer>
+        </div>
+      );
+    };
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<GamesApp />);
+  </script>
+</body>
+</html>

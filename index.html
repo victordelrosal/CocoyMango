@@ -1,466 +1,573 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Las Aventuras de Coco y Mango</title>
+  <title>Coco y Mango — Historias y Juegos</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🦎</text></svg>">
-  <!-- Meta Tag for Mobile Responsiveness -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <!-- OpenGraph Meta Tags -->
+  <meta name="theme-color" content="#065f46">
   <meta property="og:image" content="https://victordelrosal.github.io/CocoyMango/imagenes/preview.png">
   <meta property="og:title" content="Las Aventuras de Coco y Mango">
-  <meta property="og:description" content="¡Explora Las Aventuras de Coco y Mango!">
+  <meta property="og:description" content="Historias y juegos para niños — 13 aventuras de dos lagartijas en México">
   <meta property="og:url" content="https://cocoymango.net">
   <meta property="og:type" content="website">
-  <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- React and ReactDOM CDN -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            display: ['"Fredoka"', 'system-ui', 'sans-serif'],
+            body: ['"Comic Neue"', 'cursive'],
+            reading: ['"Literata"', 'Georgia', 'serif'],
+          },
+          colors: {
+            coco: { 50:'#f0fdf4', 100:'#dcfce7', 200:'#bbf7d0', 500:'#22c55e', 600:'#16a34a', 700:'#15803d', 800:'#166534', 900:'#14532d' },
+            mango: { 50:'#fffbeb', 100:'#fef3c7', 200:'#fde68a', 400:'#fbbf24', 500:'#f59e0b', 600:'#d97706' },
+            ink: { 50:'#fafaf9', 100:'#f5f5f4', 800:'#1c1917', 900:'#0c0a09', 950:'#0a0a0a' },
+          },
+        },
+      },
+    }
+  </script>
   <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
-  <!-- Babel for JSX -->
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Comic+Neue:wght@400;700&family=Fredoka:wght@300;400;500;600;700&family=Literata:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
   <style>
-    /* Custom Fonts */
-    @import url('https://fonts.googleapis.com/css2?family=Comic+Neue&display=swap');
-    @import url('https://fonts.googleapis.com/css2?family=Roboto&display=swap');
-    @import url('https://fonts.googleapis.com/css2?family=Merriweather&display=swap');
-    @import url('https://fonts.googleapis.com/css2?family=Courier+Prime&display=swap');
-    @import url('https://fonts.googleapis.com/css2?family=Roboto+Slab&display=swap');
+    *, *::before, *::after { box-sizing: border-box; margin: 0; }
+    html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+    body { font-family: 'Comic Neue', cursive; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; overflow-x: hidden; }
 
-    .font-sans { font-family: 'Roboto', sans-serif; }
-    .font-serif { font-family: 'Merriweather', serif; }
-    .font-mono { font-family: 'Courier Prime', monospace; }
-    .font-comic { font-family: 'Comic Neue', cursive; }
-    .font-rounded { font-family: 'Roboto Slab', serif; }
+    /* ── Animations ── */
+    @keyframes float { 0%,100%{ transform: translateY(0) } 50%{ transform: translateY(-12px) } }
+    @keyframes floatSlow { 0%,100%{ transform: translateY(0) rotate(0deg) } 50%{ transform: translateY(-8px) rotate(3deg) } }
+    @keyframes fadeUp { from { opacity:0; transform:translateY(20px) } to { opacity:1; transform:translateY(0) } }
+    @keyframes fadeIn { from { opacity:0 } to { opacity:1 } }
+    @keyframes scaleIn { from { opacity:0; transform:scale(0.92) } to { opacity:1; transform:scale(1) } }
+    @keyframes shimmer { 0% { background-position: -200% center } 100% { background-position: 200% center } }
+    @keyframes pulse-ring { 0% { transform:scale(1); opacity:0.4 } 100% { transform:scale(1.4); opacity:0 } }
+    @keyframes wiggle { 0%,100%{ transform:rotate(0deg) } 25%{ transform:rotate(-3deg) } 75%{ transform:rotate(3deg) } }
+    @keyframes slideUp { from { transform:translateY(100%); opacity:0 } to { transform:translateY(0); opacity:1 } }
 
-    /* Add dark mode transitions */
-    .transition-colors {
-      transition-property: background-color, border-color, color, fill, stroke;
-      transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-      transition-duration: 150ms;
+    .anim-float { animation: float 4s ease-in-out infinite; }
+    .anim-float-slow { animation: floatSlow 6s ease-in-out infinite; }
+    .anim-fade-up { animation: fadeUp 0.6s cubic-bezier(.22,1,.36,1) both; }
+    .anim-fade-in { animation: fadeIn 0.5s ease both; }
+    .anim-scale-in { animation: scaleIn 0.5s cubic-bezier(.22,1,.36,1) both; }
+    .anim-wiggle { animation: wiggle 2s ease-in-out infinite; }
+    .anim-slide-up { animation: slideUp 0.4s cubic-bezier(.22,1,.36,1) both; }
+
+    .stagger > * { animation: fadeUp 0.5s cubic-bezier(.22,1,.36,1) both; }
+    .stagger > *:nth-child(1) { animation-delay:0.04s } .stagger > *:nth-child(2) { animation-delay:0.08s }
+    .stagger > *:nth-child(3) { animation-delay:0.12s } .stagger > *:nth-child(4) { animation-delay:0.16s }
+    .stagger > *:nth-child(5) { animation-delay:0.20s } .stagger > *:nth-child(6) { animation-delay:0.24s }
+    .stagger > *:nth-child(7) { animation-delay:0.28s } .stagger > *:nth-child(8) { animation-delay:0.32s }
+    .stagger > *:nth-child(9) { animation-delay:0.36s } .stagger > *:nth-child(10){ animation-delay:0.40s }
+    .stagger > *:nth-child(11){ animation-delay:0.44s } .stagger > *:nth-child(12){ animation-delay:0.48s }
+    .stagger > *:nth-child(13){ animation-delay:0.52s }
+
+    /* ── Glass ── */
+    .glass { background:rgba(255,255,255,0.72); backdrop-filter:blur(20px) saturate(180%); -webkit-backdrop-filter:blur(20px) saturate(180%); }
+    .glass-dark { background:rgba(10,10,10,0.78); backdrop-filter:blur(20px) saturate(180%); -webkit-backdrop-filter:blur(20px) saturate(180%); }
+
+    /* ── Card ── */
+    .card {
+      transition: transform 0.4s cubic-bezier(.22,1,.36,1), box-shadow 0.4s ease;
+      will-change: transform;
+    }
+    .card:hover {
+      transform: translateY(-8px);
+      box-shadow: 0 24px 48px -12px rgba(0,0,0,0.18);
+    }
+    .card:active { transform: translateY(-2px) scale(0.98); }
+
+    .card .card-img {
+      transition: transform 0.6s cubic-bezier(.22,1,.36,1);
+    }
+    .card:hover .card-img { transform: scale(1.06); }
+
+    /* ── Reading progress ── */
+    .progress-bar {
+      background: linear-gradient(90deg, #22c55e, #fbbf24, #f97316);
+      box-shadow: 0 0 12px rgba(34,197,94,0.4);
+    }
+
+    /* ── Shimmer text ── */
+    .shimmer-text {
+      background: linear-gradient(110deg, #fff 0%, #fff 40%, #fde68a 50%, #fff 60%, #fff 100%);
+      background-size: 200% 100%;
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      animation: shimmer 3s ease-in-out infinite;
+    }
+
+    /* ── Drop cap ── */
+    .drop-cap::first-letter {
+      float: left;
+      font-family: 'Fredoka', sans-serif;
+      font-size: 3.2em;
+      line-height: 0.8;
+      padding-right: 8px;
+      padding-top: 4px;
+      color: #16a34a;
+      font-weight: 600;
+    }
+
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); border-radius: 99px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.25); }
+
+    /* ── Badge pulse ── */
+    .badge-live::after {
+      content: '';
+      position: absolute;
+      inset: -3px;
+      border-radius: inherit;
+      animation: pulse-ring 2s cubic-bezier(0.4,0,0.6,1) infinite;
+      border: 2px solid #22c55e;
     }
   </style>
 </head>
-<body class="bg-gray-100 transition-colors">
+<body>
   <div id="root"></div>
 
-  <!-- React Component -->
   <script type="text/babel">
-    const { useState, useEffect } = React;
+    const { useState, useEffect, useRef, useMemo } = React;
 
-    // Stats counter with improved centering
-    const StaticCounter = () => (
-      <div className="flex justify-center items-center p-2 w-full">
-        <div className="flex justify-center">
-          <a href="https://www.freecounterstat.com" title="free hit counters">
-            <img 
-              src="https://counter6.optistats.ovh/private/freecounterstat.php?c=kp79913cu5eaprplb72mlga1n4hfduja" 
-              border="0" 
-              title="free hit counters" 
-              alt="free hit counters"
-            />
-          </a>
-        </div>
-      </div>
+    // ═══════════════════════════════════════════════════════════
+    //  DATA
+    // ═══════════════════════════════════════════════════════════
+    const STORIES = Array.from({ length: 13 }, (_, i) => ({
+      id: i,
+      num: String(i + 1).padStart(2, '0'),
+      jsonFile: `historias/historia${String(i + 1).padStart(2, '0')}.json`,
+      imgFile: `imagenes/imagen${String(i + 1).padStart(2, '0')}.png`,
+    }));
+
+    const GAMES = [
+      { id:1, title:"El primer día de clases", type:"Calma", emoji:"⚡", grad:"from-amber-400 to-orange-500", ready:true },
+      { id:2, title:"El volcán", type:"Corredor", emoji:"🌋", grad:"from-red-500 to-orange-600" },
+      { id:3, title:"Nieve", type:"Atrapar", emoji:"❄️", grad:"from-sky-300 to-cyan-400" },
+      { id:4, title:"El cuervo y los primos", type:"Escondite", emoji:"🐦‍⬛", grad:"from-slate-500 to-slate-700" },
+      { id:5, title:"Avión de papel", type:"Vuelo", emoji:"✈️", grad:"from-blue-400 to-indigo-500" },
+      { id:6, title:"Agua de coco y mango", type:"Servir", emoji:"🥥", grad:"from-emerald-400 to-yellow-400", ready:true },
+      { id:7, title:"La alcantarilla", type:"Laberinto", emoji:"🕳️", grad:"from-stone-500 to-stone-700" },
+      { id:8, title:"El papalote", type:"Balance", emoji:"🪁", grad:"from-violet-400 to-pink-400" },
+      { id:9, title:"El tesoro perdido", type:"Puzzle", emoji:"🗺️", grad:"from-amber-500 to-yellow-500" },
+      { id:10, title:"La carrera de barquitos", type:"Carrera", emoji:"⛵", grad:"from-cyan-400 to-teal-500" },
+      { id:11, title:"El día de San Patricio", type:"Buscar", emoji:"☘️", grad:"from-green-500 to-emerald-600" },
+      { id:12, title:"La aventura al aeropuerto", type:"Tiempo", emoji:"🚌", grad:"from-indigo-400 to-purple-500" },
+      { id:13, title:"El boleto número 13", type:"Atrapar", emoji:"🎫", grad:"from-rose-400 to-red-500" },
+    ];
+
+    const readyCount = GAMES.filter(g => g.ready).length;
+
+    // ═══════════════════════════════════════════════════════════
+    //  SMALL COMPONENTS
+    // ═══════════════════════════════════════════════════════════
+    const HitCounter = () => (
+      <a href="https://www.freecounterstat.com" className="opacity-40 hover:opacity-70 transition-opacity inline-block">
+        <img src="https://counter6.optistats.ovh/private/freecounterstat.php?c=kp79913cu5eaprplb72mlga1n4hfduja" alt="counter" className="h-3" />
+      </a>
     );
 
-    // Replace Card component with a div with Tailwind classes
-    const Card = ({ children, className }) => (
-      <div className={`bg-white shadow-md rounded-lg ${className}`}>
-        {children}
-      </div>
+    const Icon = ({ d, className = "w-5 h-5" }) => (
+      <svg className={className} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+        <path d={d} />
+      </svg>
     );
 
-    // Define the stories array dynamically
-    const stories = Array.from({ length: 13 }, (_, i) => {
-      const num = String(i + 1).padStart(2, '0');
-      return {
-        id: `historia${num}`,
-        title: `Historia ${i + 1}`,
-        jsonFile: `historias/historia${num}.json`,
-        imgFile: `imagenes/imagen${num}.png`,
-      };
-    });
+    // ═══════════════════════════════════════════════════════════
+    //  HERO
+    // ═══════════════════════════════════════════════════════════
+    const Hero = ({ dark }) => (
+      <header className="relative overflow-hidden">
+        {/* Rich gradient background */}
+        <div className={`absolute inset-0 ${dark
+          ? 'bg-gradient-to-br from-ink-950 via-coco-900 to-ink-950'
+          : 'bg-gradient-to-br from-coco-600 via-coco-500 to-mango-400'
+        }`} />
 
-    const StoriesPage = () => {
-      // Add new state for story titles
-      const [storyTitles, setStoryTitles] = useState({});
-      const [isMenuOpen, setIsMenuOpen] = useState(false);
-      const [currentStoryIndex, setCurrentStoryIndex] = useState(-1); // -1 for index page
-      const [fontSize, setFontSize] = useState(2);
-      const [fontFamily, setFontFamily] = useState(0);
-      const [pageStats, setPageStats] = useState({});
-      const [readCount, setReadCount] = useState({});
-      const [storyContent, setStoryContent] = useState(null); // Content of the current story
-      const [storyTitle, setStoryTitle] = useState(""); // Add this state for the title
-      const [isLoading, setIsLoading] = useState(false); // Loading state for fetching content
-      const [isDarkMode, setIsDarkMode] = useState(false); // Add dark mode state
+        {/* Noise texture overlay */}
+        <div className="absolute inset-0 opacity-[0.03]" style={{backgroundImage:'url("data:image/svg+xml,%3Csvg viewBox=%270 0 256 256%27 xmlns=%27http://www.w3.org/2000/svg%27%3E%3Cfilter id=%27noise%27%3E%3CfeTurbulence type=%27fractalNoise%27 baseFrequency=%270.9%27 numOctaves=%274%27 stitchTiles=%27stitch%27/%3E%3C/filter%3E%3Crect width=%27100%25%27 height=%27100%25%27 filter=%27url(%23noise)%27/%3E%3C/svg%3E")'}} />
 
-      const fontSizes = ['text-lg', 'text-xl', 'text-2xl', 'text-3xl', 'text-4xl'];
-      const fontFamilies = ['font-sans', 'font-serif', 'font-mono', 'font-comic', 'font-rounded'];
+        {/* Floating decorative elements */}
+        <div className="absolute top-8 left-[8%] text-4xl anim-float opacity-30" style={{animationDelay:'0s'}}>🌿</div>
+        <div className="absolute top-16 right-[12%] text-3xl anim-float-slow opacity-25" style={{animationDelay:'1s'}}>🌸</div>
+        <div className="absolute bottom-6 left-[15%] text-2xl anim-float opacity-20" style={{animationDelay:'2s'}}>🦋</div>
+        <div className="absolute bottom-10 right-[8%] text-3xl anim-float-slow opacity-25" style={{animationDelay:'0.5s'}}>🌺</div>
+        <div className="absolute top-[40%] left-[3%] text-2xl anim-float opacity-15" style={{animationDelay:'1.5s'}}>✨</div>
 
-      // Add new effect to fetch all story titles on mount
-      useEffect(() => {
-        const fetchAllTitles = async () => {
-          const titles = {};
-          for (let i = 0; i < stories.length; i++) {
-            try {
-              const response = await fetch(stories[i].jsonFile);
-              if (!response.ok) continue;
-              const data = await response.json();
-              titles[i] = data.title;
-            } catch (error) {
-              console.error(`Error fetching title for story ${i}:`, error);
-            }
-          }
-          setStoryTitles(titles);
-        };
-        
-        fetchAllTitles();
-      }, []);
+        {/* Gradient orbs */}
+        <div className="absolute -top-32 -right-32 w-96 h-96 bg-mango-400/20 rounded-full blur-[80px]" />
+        <div className="absolute -bottom-24 -left-24 w-80 h-80 bg-coco-200/15 rounded-full blur-[60px]" />
 
-      // Fetch story content whenever currentStoryIndex changes
-      useEffect(() => {
-        if (currentStoryIndex >= 0) {
-          const story = stories[currentStoryIndex];
-          setIsLoading(true);
-          fetch(story.jsonFile)
-            .then(response => {
-              if (!response.ok) {
-                throw new Error(`Failed to load ${story.jsonFile}`);
-              }
-              return response.json();
-            })
-            .then(data => {
-              setStoryContent(data.content);
-              setStoryTitle(data.title); // Store the title from JSON
-              setIsLoading(false);
-              // Update page stats
-              setPageStats(prev => ({
-                ...prev,
-                [currentStoryIndex]: (prev[currentStoryIndex] || 0) + 1
-              }));
-              // Update read count when a story is fully read (handled on navigation)
-            })
-            .catch(error => {
-              console.error(error);
-              setStoryContent(["Error loading story content. Please try again later."]);
-              setStoryTitle("Error loading story");
-              setIsLoading(false);
-            });
-        } else {
-          setStoryContent(null);
-          setStoryTitle("");
-        }
-      }, [currentStoryIndex]);
-
-      const adjustFontSize = (increment) => {
-        setFontSize(prev => {
-          const newSize = prev + (increment ? 1 : -1);
-          return Math.min(Math.max(newSize, 0), fontSizes.length - 1);
-        });
-      };
-
-      const nextFont = () => {
-        setFontFamily(prev => (prev + 1) % fontFamilies.length);
-      };
-
-      const completeStory = (index) => {
-        setReadCount(prev => ({
-          ...prev,
-          [index]: (prev[index] || 0) + 1
-        }));
-      };
-
-      const toggleDarkMode = () => {
-        setIsDarkMode(!isDarkMode);
-        // Update body class
-        document.body.classList.toggle('dark:bg-gray-900');
-      };
-
-      const renderIndex = () => (
-        <div className={`px-4 ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-100'}`}>
-          <h1 className="text-4xl font-bold text-center mb-8">Las Aventuras de Coco y Mango</h1>
-          <Card className={`p-4 ${isDarkMode ? 'bg-gray-800 text-white' : 'bg-white'}`}>
-            <div className="space-y-4">
-              {stories.map((story, index) => (
-                <div
-                  key={story.id}
-                  onClick={() => setCurrentStoryIndex(index)}
-                  className="p-3 border rounded-lg hover:bg-gray-50 cursor-pointer transition-colors flex items-center space-x-4"
-                >
-                  <img 
-                    src={story.imgFile} 
-                    alt={`Imagen de ${storyTitles[index] || 'Loading...'}`}
-                    className="w-16 h-16 object-cover rounded-md"
-                  />
-                  <h2 className="text-lg">{storyTitles[index] || 'Loading...'}</h2>
-                </div>
-              ))}
+        <div className="relative max-w-5xl mx-auto px-5 pt-12 pb-8 sm:pt-16 sm:pb-10 text-center">
+          {/* Avatar */}
+          <div className="anim-scale-in mx-auto mb-6">
+            <div className="relative inline-block">
+              <div className="w-32 h-32 sm:w-40 sm:h-40 rounded-[2rem] overflow-hidden shadow-2xl ring-4 ring-white/30 anim-wiggle" style={{animationDuration:'6s'}}>
+                <img src="imagenes/preview.png" alt="Coco y Mango" className="w-full h-full object-cover" />
+              </div>
+              {/* Floating badge */}
+              <div className="absolute -bottom-2 -right-2 bg-mango-400 text-ink-900 text-xs font-bold px-2.5 py-1 rounded-full shadow-lg font-display">
+                13 historias
+              </div>
             </div>
-          </Card>
-        </div>
-      );
+          </div>
 
-      const renderStory = (story, index) => (
-        <div className={`relative min-h-screen ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-100'}`}>
-          {/* Font Controls */}
-          <div className={`sticky top-0 z-10 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} border-b mb-4`}>
-            <div className="max-w-full mx-auto p-3 flex justify-between items-center pl-12">
-              {/* Added pl-12 to create space for the burger menu */}
-              <div className="flex items-center gap-2">
-                {/* Dark Mode Toggle */}
-                <button 
-                  onClick={toggleDarkMode}
-                  className="p-2 hover:bg-gray-100 rounded-full"
-                  aria-label="Toggle Dark Mode"
+          {/* Title */}
+          <h1 className="font-display font-bold text-white drop-shadow-lg anim-fade-up" style={{animationDelay:'0.15s'}}>
+            <span className="block text-lg sm:text-xl font-medium opacity-80 mb-1">Las Aventuras de</span>
+            <span className="shimmer-text text-5xl sm:text-7xl tracking-tight">Coco y Mango</span>
+          </h1>
+
+          {/* Subtitle */}
+          <p className="mt-4 text-white/70 text-sm sm:text-base font-display font-medium max-w-md mx-auto anim-fade-up leading-relaxed" style={{animationDelay:'0.25s'}}>
+            Dos lagartijas, un pueblo en México, y mil aventuras por vivir.
+            <br className="hidden sm:block" />
+            Lee las historias. Juega los juegos.
+          </p>
+        </div>
+
+        {/* Curved bottom edge */}
+        <div className="absolute bottom-0 left-0 right-0">
+          <svg viewBox="0 0 1440 48" fill="none" className="w-full" preserveAspectRatio="none">
+            <path d="M0 48h1440V24C1200 0 960 40 720 40S240 0 0 24v24z" fill={dark ? '#0a0a0a' : '#fafaf9'} />
+          </svg>
+        </div>
+      </header>
+    );
+
+    // ═══════════════════════════════════════════════════════════
+    //  TABS
+    // ═══════════════════════════════════════════════════════════
+    const TabBar = ({ active, onChange, dark }) => {
+      const tabs = [
+        { key:'historias', icon:'📖', label:'Historias', badge:'13' },
+        { key:'juegos', icon:'🎮', label:'Juegos', badge: readyCount > 0 ? `${readyCount} listos` : '0' },
+      ];
+      return (
+        <nav className={`sticky top-0 z-40 border-b transition-colors ${dark ? 'glass-dark border-white/5' : 'glass border-ink-100/60'}`}>
+          <div className="max-w-5xl mx-auto px-4 flex">
+            {tabs.map(t => {
+              const isActive = active === t.key;
+              return (
+                <button
+                  key={t.key}
+                  onClick={() => onChange(t.key)}
+                  className={`relative flex-1 py-3.5 flex items-center justify-center gap-2 text-sm sm:text-base font-display font-semibold transition-colors ${
+                    isActive ? (dark ? 'text-coco-500' : 'text-coco-700') : (dark ? 'text-gray-500 hover:text-gray-300' : 'text-gray-400 hover:text-gray-600')
+                  }`}
                 >
-                  {isDarkMode ? (
-                    <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-                    </svg>
-                  ) : (
-                    <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-                    </svg>
+                  <span>{t.icon}</span>
+                  <span>{t.label}</span>
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${
+                    isActive
+                      ? (dark ? 'bg-coco-500/20 text-coco-400' : 'bg-coco-100 text-coco-700')
+                      : (dark ? 'bg-white/5 text-gray-500' : 'bg-gray-100 text-gray-400')
+                  }`}>{t.badge}</span>
+                  {isActive && (
+                    <span className={`absolute bottom-0 inset-x-[15%] h-[3px] rounded-full ${dark ? 'bg-coco-500' : 'bg-coco-600'}`} />
                   )}
                 </button>
-                <button 
-                  onClick={() => adjustFontSize(false)}
-                  className="p-2 hover:bg-gray-100 rounded-full"
-                  disabled={fontSize === 0}
-                  aria-label="Decrease Font Size"
-                >
-                  {/* MinusCircle Icon */}
-                  <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
-                  </svg>
+              );
+            })}
+          </div>
+        </nav>
+      );
+    };
+
+    // ═══════════════════════════════════════════════════════════
+    //  STORY CARD
+    // ═══════════════════════════════════════════════════════════
+    const StoryCard = ({ story, title, index, dark, onClick }) => (
+      <article onClick={onClick} className={`card cursor-pointer rounded-2xl overflow-hidden ${dark ? 'bg-ink-900 ring-1 ring-white/5' : 'bg-white ring-1 ring-black/[0.04]'}`}>
+        <div className="relative aspect-[4/3] overflow-hidden">
+          <img src={story.imgFile} alt={title} className="card-img w-full h-full object-cover" loading="lazy" />
+          {/* Number badge */}
+          <div className="absolute top-2.5 left-2.5">
+            <div className="w-8 h-8 rounded-xl bg-black/40 backdrop-blur-md flex items-center justify-center text-white text-xs font-display font-bold ring-1 ring-white/10">
+              {index + 1}
+            </div>
+          </div>
+          {/* Bottom gradient fade */}
+          <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/40 to-transparent" />
+        </div>
+        <div className="p-3.5 sm:p-4">
+          <h3 className={`font-display font-semibold text-[13px] sm:text-[15px] leading-snug ${dark ? 'text-white' : 'text-ink-800'}`}>
+            {title || '\u00A0'}
+          </h3>
+          <div className="flex items-center gap-1.5 mt-2">
+            <span className={`inline-block w-1.5 h-1.5 rounded-full ${dark ? 'bg-coco-500' : 'bg-coco-400'}`} />
+            <span className={`text-[11px] font-display font-medium ${dark ? 'text-gray-500' : 'text-gray-400'}`}>
+              Episodio {index + 1}
+            </span>
+          </div>
+        </div>
+      </article>
+    );
+
+    // ═══════════════════════════════════════════════════════════
+    //  GAME CARD
+    // ═══════════════════════════════════════════════════════════
+    const GameCard = ({ game, dark }) => {
+      const imgNum = String(game.id).padStart(2, '0');
+      return (
+        <a
+          href={game.ready ? `juegos.html#game${game.id}` : undefined}
+          onClick={e => { if (!game.ready) e.preventDefault(); }}
+          className={`card block rounded-2xl overflow-hidden ${dark ? 'bg-ink-900 ring-1 ring-white/5' : 'bg-white ring-1 ring-black/[0.04]'} ${!game.ready ? 'opacity-50 saturate-50 cursor-not-allowed' : 'cursor-pointer'}`}
+        >
+          <div className="relative aspect-[4/3] overflow-hidden">
+            <img src={`imagenes/imagen${imgNum}.png`} alt={game.title} className="card-img w-full h-full object-cover" loading="lazy" />
+            {/* Color gradient overlay */}
+            <div className={`absolute inset-0 bg-gradient-to-br ${game.grad} mix-blend-multiply opacity-25`} />
+            {/* Emoji */}
+            <div className="absolute top-2.5 right-2.5 w-10 h-10 rounded-xl bg-white/80 backdrop-blur-md flex items-center justify-center text-xl shadow-sm ring-1 ring-black/5">
+              {game.emoji}
+            </div>
+            {/* Play overlay */}
+            {game.ready && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black/0 hover:bg-black/30 transition-colors duration-300 group">
+                <div className="w-14 h-14 rounded-full bg-white/90 flex items-center justify-center shadow-xl opacity-0 group-hover:opacity-100 scale-75 group-hover:scale-100 transition-all duration-300">
+                  <svg className="w-6 h-6 text-coco-600 ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                </div>
+              </div>
+            )}
+            {!game.ready && (
+              <div className="absolute inset-x-0 bottom-0 p-2.5">
+                <span className="text-[10px] font-display font-semibold bg-black/50 text-white/80 px-2.5 py-1 rounded-full backdrop-blur-md">
+                  Próximamente
+                </span>
+              </div>
+            )}
+          </div>
+          <div className="p-3.5 sm:p-4">
+            <h3 className={`font-display font-semibold text-[13px] sm:text-[15px] leading-snug ${dark ? 'text-white' : 'text-ink-800'}`}>
+              {game.title}
+            </h3>
+            <div className="flex items-center gap-2 mt-2">
+              <span className={`text-[10px] font-display font-semibold px-2 py-0.5 rounded-full ${dark ? 'bg-white/5 text-gray-400' : 'bg-ink-100 text-gray-500'}`}>
+                {game.type}
+              </span>
+              {game.ready && (
+                <span className="relative text-[10px] font-display font-bold px-2 py-0.5 rounded-full bg-coco-500/10 text-coco-600 badge-live">
+                  Jugar
+                </span>
+              )}
+            </div>
+          </div>
+        </a>
+      );
+    };
+
+    // ═══════════════════════════════════════════════════════════
+    //  STORY READER
+    // ═══════════════════════════════════════════════════════════
+    const Reader = ({ story, index, title, content, loading, dark, onBack, onNav, total }) => {
+      const [fs, setFs] = useState(1);
+      const [progress, setProgress] = useState(0);
+
+      const sizes = ['text-base leading-7', 'text-lg leading-8', 'text-xl leading-9', 'text-2xl leading-10'];
+
+      useEffect(() => {
+        const onScroll = () => {
+          const p = window.scrollY / (document.documentElement.scrollHeight - window.innerHeight);
+          setProgress(Math.min(1, Math.max(0, p)) * 100);
+        };
+        window.addEventListener('scroll', onScroll, { passive: true });
+        return () => window.removeEventListener('scroll', onScroll);
+      }, []);
+
+      useEffect(() => { window.scrollTo({ top: 0 }); }, [index]);
+
+      return (
+        <div className={`min-h-screen transition-colors duration-300 ${dark ? 'bg-ink-950' : 'bg-ink-50'}`}>
+          {/* Progress bar */}
+          <div className="fixed top-0 left-0 right-0 h-[3px] z-50">
+            <div className="progress-bar h-full transition-[width] duration-100" style={{ width: `${progress}%` }} />
+          </div>
+
+          {/* Toolbar */}
+          <div className={`sticky top-0 z-40 border-b transition-colors ${dark ? 'glass-dark border-white/5' : 'glass border-ink-100/50'}`}>
+            <div className="max-w-2xl mx-auto px-4 h-12 flex items-center justify-between">
+              <div className="flex items-center gap-2 min-w-0">
+                <button onClick={onBack} className={`shrink-0 w-8 h-8 rounded-full flex items-center justify-center transition-colors ${dark ? 'hover:bg-white/10' : 'hover:bg-black/5'}`}>
+                  <Icon d="M10 19l-7-7m0 0l7-7m-7 7h18" className={`w-[18px] h-[18px] ${dark ? 'text-gray-400' : 'text-gray-500'}`} />
                 </button>
-                <button 
-                  onClick={() => adjustFontSize(true)}
-                  className="p-2 hover:bg-gray-100 rounded-full"
-                  disabled={fontSize === fontSizes.length - 1}
-                  aria-label="Increase Font Size"
-                >
-                  {/* PlusCircle Icon */}
-                  <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                  </svg>
+                <span className={`text-xs font-display font-medium truncate ${dark ? 'text-gray-500' : 'text-gray-400'}`}>
+                  {index + 1} / {total}
+                </span>
+              </div>
+              <div className="flex items-center gap-0.5">
+                <button onClick={() => setFs(s => Math.max(0, s-1))} disabled={fs===0}
+                  className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-colors disabled:opacity-20 ${dark ? 'hover:bg-white/10 text-gray-400' : 'hover:bg-black/5 text-gray-500'}`}>
+                  A-
+                </button>
+                <button onClick={() => setFs(s => Math.min(sizes.length-1, s+1))} disabled={fs===sizes.length-1}
+                  className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-colors disabled:opacity-20 ${dark ? 'hover:bg-white/10 text-gray-400' : 'hover:bg-black/5 text-gray-500'}`}>
+                  A+
                 </button>
               </div>
-              <button 
-                onClick={nextFont}
-                className="p-2 hover:bg-gray-100 rounded-full"
-                aria-label="Change Font Family"
-              >
-                <svg 
-                  xmlns="http://www.w3.org/2000/svg" 
-                  className={`w-6 h-6 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`} 
-                  viewBox="0 0 24 24"
-                >
-                  <text 
-                    x="50%" 
-                    y="50%" 
-                    dominantBaseline="middle" 
-                    textAnchor="middle"
-                    fontSize="18"
-                    fontFamily="Georgia, serif"
-                    fontWeight="bold"
-                    fill="currentColor"
+            </div>
+          </div>
+
+          {/* Content */}
+          <article className="max-w-2xl mx-auto px-5 pt-8 pb-36">
+            {/* Image */}
+            <div className="rounded-2xl overflow-hidden shadow-xl ring-1 ring-black/5 mb-8 anim-scale-in">
+              <img src={story.imgFile} alt={title} className="w-full h-auto" />
+            </div>
+
+            {/* Title */}
+            <h1 className={`font-display font-bold text-center mb-10 anim-fade-up ${dark ? 'text-white' : 'text-ink-900'}`} style={{animationDelay:'0.1s', fontSize:'clamp(1.5rem, 5vw, 2.5rem)', lineHeight:1.2}}>
+              {title}
+            </h1>
+
+            {/* Story text */}
+            {loading ? (
+              <div className="flex justify-center py-24">
+                <div className="w-6 h-6 rounded-full border-2 border-coco-500 border-t-transparent animate-spin" />
+              </div>
+            ) : (
+              <div className={`font-reading ${sizes[fs]} ${dark ? 'text-gray-300' : 'text-ink-800'}`}>
+                {content && content.map((p, i) => (
+                  <p key={i}
+                    className={`mb-6 anim-fade-up ${i === 0 ? 'drop-cap' : ''}`}
+                    style={{animationDelay: `${0.05 * Math.min(i, 8)}s`}}
                   >
-                    T
-                  </text>
-                </svg>
+                    {p}
+                  </p>
+                ))}
+                {/* Fin ornament */}
+                <div className={`text-center pt-8 pb-2 font-display text-sm font-medium tracking-widest uppercase ${dark ? 'text-gray-600' : 'text-gray-300'}`}>
+                  — fin —
+                </div>
+              </div>
+            )}
+          </article>
+
+          {/* Bottom nav */}
+          <div className={`fixed bottom-0 inset-x-0 z-40 border-t transition-colors ${dark ? 'glass-dark border-white/5' : 'glass border-ink-100/50'}`}>
+            <div className="max-w-2xl mx-auto px-4 h-14 flex items-center justify-between">
+              <button
+                onClick={() => onNav(index - 1)} disabled={index === 0}
+                className={`flex items-center gap-1.5 px-3.5 py-2 rounded-full text-sm font-display font-semibold transition-all disabled:opacity-25 ${dark ? 'text-gray-300 hover:bg-white/5' : 'text-gray-600 hover:bg-black/5'}`}
+              >
+                <Icon d="M15 19l-7-7 7-7" className="w-4 h-4" />
+                <span className="hidden sm:inline">Anterior</span>
+              </button>
+
+              <div className="flex items-center gap-1">
+                {STORIES.map((_, i) => (
+                  <button key={i} onClick={() => onNav(i)}
+                    className={`w-2 h-2 rounded-full transition-all ${i === index ? (dark ? 'bg-coco-500 w-5' : 'bg-coco-600 w-5') : (dark ? 'bg-white/10 hover:bg-white/20' : 'bg-black/10 hover:bg-black/20')}`}
+                  />
+                ))}
+              </div>
+
+              <button
+                onClick={() => onNav(index + 1)} disabled={index === total - 1}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-display font-semibold bg-coco-600 hover:bg-coco-700 text-white shadow-md shadow-coco-600/25 transition-all disabled:opacity-25 disabled:shadow-none"
+              >
+                <span className="hidden sm:inline">Siguiente</span>
+                <Icon d="M9 5l7 7-7 7" className="w-4 h-4" />
               </button>
             </div>
           </div>
-
-          {/* Story Content */}
-          <div className="max-w-full mx-auto p-4 pb-16">
-            <Card className={`p-4 ${isDarkMode ? 'bg-gray-800 text-white' : 'bg-white'}`}>
-              <h2 className={`text-4xl font-bold mb-4 text-center ${fontFamilies[fontFamily]}`}>
-                {storyTitle || "Loading..."} {/* Use the dynamic title */}
-              </h2>
-              
-              {/* Story Image */}
-              <div className="w-full mb-4">
-                <img 
-                  src={story.imgFile} 
-                  alt={`Imagen de ${story.title}`} 
-                  className="w-full h-auto rounded-lg object-cover"
-                />
-              </div>
-
-              {/* Loading Indicator */}
-              {isLoading ? (
-                <div className="flex justify-center items-center h-64">
-                  <svg className="animate-spin h-10 w-10 text-gray-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
-                  </svg>
-                </div>
-              ) : (
-                <div className={`space-y-4 leading-relaxed text-justify pb-20 ${fontSizes[fontSize]} ${fontFamilies[fontFamily]}`}>
-                  {storyContent && storyContent.map((paragraph, pIndex) => (
-                    <p key={pIndex}>{paragraph}</p>
-                  ))}
-                </div>
-              )}
-            </Card>
-          </div>
-
-          {/* Navigation Footer */}
-          <div className={`fixed bottom-0 left-0 right-0 ${isDarkMode ? 'bg-gray-800/95' : 'bg-white/95'} backdrop-blur-sm border-t shadow-sm`}>
-            <div className="max-w-full mx-auto">
-              {/* Top row: Navigation */}
-              <div className="flex justify-between items-center p-3 border-b">
-                <button 
-                  onClick={() => {
-                    if (index > 0) {
-                      setCurrentStoryIndex(index - 1);
-                      completeStory(index - 1);
-                    }
-                  }}
-                  className={`p-2 hover:bg-gray-100 rounded-full transition-colors ${index === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
-                  disabled={index === 0}
-                  aria-label="Previous Story"
-                >
-                  {/* ChevronLeft Icon */}
-                  <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                  </svg>
-                </button>
-                
-                <div className="text-sm">
-                  {index + 1} de {stories.length}
-                </div>
-                
-                <button 
-                  onClick={() => {
-                    completeStory(index);
-                    if (index < stories.length - 1) {
-                      setCurrentStoryIndex(index + 1);
-                    }
-                  }}
-                  disabled={index === stories.length - 1}
-                  className={`p-2 hover:bg-gray-100 rounded-full transition-colors ${index === stories.length - 1 ? 'opacity-50 cursor-not-allowed' : ''}`}
-                  aria-label="Next Story"
-                >
-                  {/* ChevronRight Icon */}
-                  <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </button>
-              </div>
-              
-              {/* Replace old counter with new StaticCounter */}
-              <StaticCounter />
-            </div>
-          </div>
-
-          {/* Back to Index Button */}
-          <button
-            onClick={() => setCurrentStoryIndex(-1)}
-            className={`fixed right-3 top-3 p-2 ${isDarkMode ? 'bg-gray-800 hover:bg-gray-700' : 'bg-white hover:bg-gray-100'} rounded-full shadow-lg`}
-            aria-label="Back to Index"
-          >
-            {/* ArrowUp Icon */}
-            <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
-            </svg>
-          </button>
-        </div>
-      );
-
-      // Burger Menu
-      const renderBurgerMenu = () => (
-        <>
-          {/* Burger Button */}
-          <button
-            onClick={() => setIsMenuOpen(true)}
-            className="fixed left-3 top-3 p-2 bg-white hover:bg-gray-100 z-50 flex items-center justify-center h-8 w-8 rounded-full shadow"
-            aria-label="Open Menu"
-          >
-            {/* Menu Icon */}
-            <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-            </svg>
-          </button>
-
-          {/* Menu Overlay */}
-          {isMenuOpen && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 z-50" onClick={() => setIsMenuOpen(false)}>
-              {/* Menu Content */}
-              <div 
-                className="fixed inset-y-0 left-0 w-56 bg-white shadow-lg transform transition-transform duration-200 ease-in-out"
-                onClick={e => e.stopPropagation()}
-              >
-                {/* Menu Header */}
-                <div className="flex justify-between items-center p-4 border-b">
-                  <h3 className="font-bold text-lg">Menú</h3>
-                  <button onClick={() => setIsMenuOpen(false)} aria-label="Close Menu">
-                    {/* X Icon */}
-                    <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                </div>
-
-                {/* Menu Items */}
-                <div className="p-4 space-y-3 overflow-y-auto h-full">
-                  <div
-                    onClick={() => {
-                      setCurrentStoryIndex(-1);
-                      setIsMenuOpen(false);
-                    }}
-                    className="cursor-pointer hover:text-blue-600 font-semibold flex items-center space-x-2"
-                  >
-                    {/* Home Icon */}
-                    <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M13 5v6h6" />
-                    </svg>
-                    <span>Índice Principal</span>
-                  </div>
-                  
-                  <div className="h-px bg-gray-200 my-2" />
-                  
-                  {stories.map((story, index) => (
-                    <div
-                      key={story.id}
-                      onClick={() => {
-                        setCurrentStoryIndex(index);
-                        setIsMenuOpen(false);
-                      }}
-                      className={`cursor-pointer hover:text-blue-600 flex items-center space-x-2 ${
-                        currentStoryIndex === index ? 'text-blue-600 font-semibold' : ''
-                      }`}
-                    >
-                      {/* Story Icon */}
-                      <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16h8M8 12h8m-8-4h8" />
-                      </svg>
-                      <span>{storyTitles[index] || 'Loading...'}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-        </>
-      );
-
-      return (
-        <div className="min-h-screen">
-          {renderBurgerMenu()}
-          {currentStoryIndex === -1 
-            ? renderIndex()
-            : renderStory(stories[currentStoryIndex], currentStoryIndex)
-          }
         </div>
       );
     };
 
-    ReactDOM.createRoot(document.getElementById('root')).render(<StoriesPage />);
+    // ═══════════════════════════════════════════════════════════
+    //  APP
+    // ═══════════════════════════════════════════════════════════
+    const App = () => {
+      const [tab, setTab] = useState('historias');
+      const [story, setStory] = useState(-1);
+      const [titles, setTitles] = useState({});
+      const [content, setContent] = useState(null);
+      const [title, setTitle] = useState('');
+      const [loading, setLoading] = useState(false);
+      const [dark, setDark] = useState(() => window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? false);
+
+      useEffect(() => {
+        Promise.all(STORIES.map(async (s, i) => {
+          try { const d = await (await fetch(s.jsonFile)).json(); return [i, d.title]; }
+          catch { return [i, null]; }
+        })).then(results => {
+          const t = {};
+          results.forEach(([i, v]) => { if (v) t[i] = v; });
+          setTitles(t);
+        });
+      }, []);
+
+      useEffect(() => {
+        if (story < 0) { setContent(null); setTitle(''); return; }
+        setLoading(true);
+        fetch(STORIES[story].jsonFile).then(r => r.json())
+          .then(d => { setContent(d.content); setTitle(d.title); setLoading(false); })
+          .catch(() => { setContent(['Error al cargar la historia.']); setTitle('Error'); setLoading(false); });
+      }, [story]);
+
+      useEffect(() => {
+        document.documentElement.style.background = dark ? '#0a0a0a' : '#fafaf9';
+        document.body.style.background = dark ? '#0a0a0a' : '#fafaf9';
+      }, [dark]);
+
+      if (story >= 0) {
+        return <Reader story={STORIES[story]} index={story} title={title} content={content} loading={loading}
+          dark={dark} onBack={() => setStory(-1)} onNav={i => { if (i >= 0 && i < STORIES.length) setStory(i); }} total={STORIES.length} />;
+      }
+
+      return (
+        <div className={`min-h-screen transition-colors duration-300 ${dark ? 'bg-ink-950' : 'bg-ink-50'}`}>
+          {/* Dark toggle */}
+          <button onClick={() => setDark(d => !d)}
+            className={`fixed top-3.5 right-3.5 z-50 w-9 h-9 rounded-full flex items-center justify-center shadow-lg ring-1 transition-all ${
+              dark ? 'bg-ink-900 ring-white/10 hover:ring-white/20 text-mango-400' : 'bg-white ring-black/5 hover:ring-black/10 text-gray-500'}`}
+          >
+            {dark
+              ? <Icon d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" className="w-4 h-4" />
+              : <Icon d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" className="w-4 h-4" />
+            }
+          </button>
+
+          <Hero dark={dark} />
+          <TabBar active={tab} onChange={setTab} dark={dark} />
+
+          <main className="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+            {tab === 'historias' ? (
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3.5 sm:gap-5 stagger">
+                {STORIES.map((s, i) => (
+                  <StoryCard key={s.id} story={s} title={titles[i]} index={i} dark={dark} onClick={() => setStory(i)} />
+                ))}
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3.5 sm:gap-5 stagger">
+                {GAMES.map(g => <GameCard key={g.id} game={g} dark={dark} />)}
+              </div>
+            )}
+          </main>
+
+          <footer className={`text-center py-10 px-4 ${dark ? 'text-gray-600' : 'text-gray-300'}`}>
+            <p className="font-display text-xs font-medium tracking-wide">
+              🦎 Coco y Mango · Hecho con amor en México 🇲🇽
+            </p>
+            <div className="mt-2"><HitCounter /></div>
+          </footer>
+        </div>
+      );
+    };
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
   </script>
 </body>
 </html>
