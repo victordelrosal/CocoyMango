@@ -1,0 +1,94 @@
+{
+  "prd_version": "1.0",
+  "game": {
+    "id": 4,
+    "title": "El cuervo y los primos",
+    "component_name": "Game4Cuervo",
+    "type": "Hide and Seek",
+    "story_connection": "Help Coco, Mango, and their cousins hide from the crow and get home safely"
+  },
+  "target_file": "juegos.html",
+  "insert_after": "// End of Game3Nieve",
+  "shared_components": [
+    "GameWrapper",
+    "GameIntroScreen",
+    "GameEndScreen",
+    "StarRating"
+  ],
+  "mechanics": {
+    "core_loop": "Guide 4 lizards across the screen to reach home. When the crow appears, tap a hiding spot to hide the current lizard.",
+    "controls": {
+      "tap_lizard": "Select which lizard to move",
+      "tap_destination": "Move selected lizard toward that point",
+      "tap_hiding_spot": "Hide current lizard when crow is near"
+    },
+    "characters": [
+      { "id": "coco", "color": "#4CAF50", "name": "Coco" },
+      { "id": "mango", "color": "#FF9800", "name": "Mango" },
+      { "id": "primo1", "color": "#2196F3", "name": "Azul" },
+      { "id": "primo2", "color": "#E91E63", "name": "Rosa" }
+    ],
+    "crow": {
+      "patrol_pattern": "Flies across screen periodically, scanning for lizards",
+      "warning_time_ms": 1500,
+      "scan_duration_ms": 3000,
+      "frequency": "Every 5-8 seconds randomly"
+    },
+    "hiding_spots": [
+      { "type": "rock", "emoji": "🪨", "capacity": 2 },
+      { "type": "bush", "emoji": "🌳", "capacity": 2 },
+      { "type": "flower", "emoji": "🌺", "capacity": 1 }
+    ],
+    "goal": "Get all 4 lizards to the house on the right side"
+  },
+  "states": {
+    "intro": "Show GameIntroScreen with instructions",
+    "playing": "Lizards can move, crow patrols",
+    "crow_warning": "Crow shadow appears, 1.5s to hide",
+    "crow_scanning": "Crow is looking, anyone not hidden is caught",
+    "lizard_caught": "One lizard caught, continues with remaining",
+    "victory": "All 4 lizards reached home safely",
+    "defeat": "All lizards caught before reaching home",
+    "ended": "Show GameEndScreen"
+  },
+  "scoring": {
+    "points_per_lizard_saved": 25,
+    "bonus_no_catches": 50,
+    "star_thresholds": {
+      "1_star": 25,
+      "2_stars": 75,
+      "3_stars": 100
+    },
+    "note": "3 stars = all 4 saved with bonus"
+  },
+  "visuals": {
+    "background": "Mexican village scene with path from left to right, house on right",
+    "crow": "Black crow silhouette, flies with flapping animation",
+    "crow_shadow": "Dark circular shadow on ground when crow approaches (warning)",
+    "hiding_spots": "Scattered across the path, clearly tappable",
+    "lizards": "Small colored lizards, eyes blink when selected"
+  },
+  "audio": {
+    "required": false,
+    "optional": [
+      { "event": "crow_warning", "description": "Crow caw sound" },
+      { "event": "hide_success", "description": "Rustle/swoosh" },
+      { "event": "lizard_caught", "description": "Sad squeak" },
+      { "event": "lizard_safe", "description": "Happy chirp" }
+    ]
+  },
+  "instructions_text": "¡Lleva a los 4 lagartijos a casa! Cuando veas al cuervo, ¡escóndete rápido!",
+  "implementation_notes": [
+    "Lizards move automatically toward tapped destination at slow pace",
+    "Crow warning: shadow grows on ground before crow appears",
+    "If lizard is in open when crow scans, they're caught",
+    "Hidden lizards are safe but can't move during scan",
+    "Victory when all remaining lizards reach right side",
+    "Simpler alternative: one lizard at a time, 4 rounds"
+  ],
+  "after_implementation": {
+    "update_available_games": "Add 4 to availableGames array",
+    "test_on_mobile": true,
+    "test_on_desktop": true
+  }
+}

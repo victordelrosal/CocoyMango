@@ -1,0 +1,81 @@
+{
+  "prd_version": "1.0",
+  "game": {
+    "id": 2,
+    "title": "El volcán",
+    "component_name": "Game2Volcan",
+    "type": "Endless Runner",
+    "story_connection": "Coco and Mango must escape from the erupting volcano by running downhill"
+  },
+  "target_file": "juegos.html",
+  "insert_after": "// End of Game1PrimerDia",
+  "shared_components": [
+    "GameWrapper",
+    "GameIntroScreen",
+    "GameEndScreen",
+    "StarRating"
+  ],
+  "mechanics": {
+    "core_loop": "Player taps/swipes to make Coco jump over obstacles while running downhill automatically",
+    "controls": {
+      "tap": "Jump (short hop)",
+      "swipe_up": "High jump (for tall obstacles)",
+      "swipe_left_right": "Dodge left/right between lanes"
+    },
+    "obstacles": [
+      { "type": "rock", "emoji": "🪨", "behavior": "Static, jump over" },
+      { "type": "lava_pool", "emoji": "🔥", "behavior": "Static wide obstacle, high jump required" },
+      { "type": "falling_rock", "emoji": "💥", "behavior": "Falls from top, dodge left/right" }
+    ],
+    "speed": {
+      "initial": 1.0,
+      "increment": 0.1,
+      "increment_interval_ms": 5000,
+      "max": 2.5
+    },
+    "lanes": 3,
+    "lives": 3
+  },
+  "states": {
+    "intro": "Show GameIntroScreen with instructions",
+    "playing": "Active gameplay, obstacles spawning",
+    "hit": "Brief invulnerability after collision, lose life",
+    "ended": "Show GameEndScreen with score and stars"
+  },
+  "scoring": {
+    "points_per_second": 1,
+    "points_per_obstacle_dodged": 5,
+    "star_thresholds": {
+      "1_star": 50,
+      "2_stars": 100,
+      "3_stars": 200
+    }
+  },
+  "visuals": {
+    "background": "Volcanic mountain gradient (red/orange at top to gray/brown at bottom)",
+    "character": "Coco (green lizard) running animation - can use CSS keyframes",
+    "lava_flow": "Animated lava flowing down from top (chasing effect)",
+    "particles": "Optional ash/ember particles floating"
+  },
+  "audio": {
+    "required": false,
+    "optional": [
+      { "event": "jump", "description": "Short bounce sound" },
+      { "event": "hit", "description": "Collision thud" },
+      { "event": "game_over", "description": "Sad trombone or similar" }
+    ]
+  },
+  "instructions_text": "¡Corre! Toca para saltar, desliza para esquivar las rocas y la lava.",
+  "implementation_notes": [
+    "Use requestAnimationFrame for smooth 60fps game loop",
+    "Obstacles spawn at top and move down (gives illusion of running)",
+    "Coco stays in lower third of screen, moves between 3 lanes",
+    "Lava line at top slowly descends if player is too slow (optional pressure mechanic)",
+    "Touch-first controls, mouse click = tap for desktop"
+  ],
+  "after_implementation": {
+    "update_available_games": "Add 2 to availableGames array",
+    "test_on_mobile": true,
+    "test_on_desktop": true
+  }
+}

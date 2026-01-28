@@ -1,0 +1,79 @@
+{
+  "prd_version": "1.0",
+  "game": {
+    "id": 3,
+    "title": "Nieve",
+    "component_name": "Game3Nieve",
+    "type": "Collector",
+    "story_connection": "Coco and Mango experience snow for the first time and want to catch as many snowflakes as possible"
+  },
+  "target_file": "juegos.html",
+  "insert_after": "// End of Game2Volcan",
+  "shared_components": [
+    "GameWrapper",
+    "GameIntroScreen",
+    "GameEndScreen",
+    "StarRating"
+  ],
+  "mechanics": {
+    "core_loop": "Move Coco left/right to catch falling snowflakes, avoid sun rays that melt your snow count",
+    "controls": {
+      "drag_or_touch": "Move Coco horizontally to position under snowflakes",
+      "tap_sides": "Alternative: tap left/right side of screen to move in that direction"
+    },
+    "items": [
+      { "type": "snowflake", "emoji": "❄️", "effect": "+1 snow count", "frequency": "common" },
+      { "type": "big_snowflake", "emoji": "✨", "effect": "+3 snow count", "frequency": "rare" },
+      { "type": "sun_ray", "emoji": "☀️", "effect": "-5 snow count (melts)", "frequency": "occasional" },
+      { "type": "hot_chocolate", "emoji": "☕", "effect": "Shield for 3 seconds", "frequency": "rare" }
+    ],
+    "duration_seconds": 60,
+    "fall_speed": {
+      "initial": 1.0,
+      "increment": 0.15,
+      "increment_interval_ms": 10000
+    }
+  },
+  "states": {
+    "intro": "Show GameIntroScreen with instructions",
+    "playing": "Active gameplay, items falling from sky",
+    "shielded": "Protected from sun rays (after hot chocolate)",
+    "ended": "Show GameEndScreen with final snow count and stars"
+  },
+  "scoring": {
+    "goal": "Collect as many snowflakes as possible in 60 seconds",
+    "star_thresholds": {
+      "1_star": 20,
+      "2_stars": 40,
+      "3_stars": 70
+    }
+  },
+  "visuals": {
+    "background": "Winter scene gradient (white/light blue), snow-covered ground at bottom",
+    "character": "Coco with winter hat/scarf, holding a bucket or hands up to catch",
+    "snowflakes": "CSS animated snowflakes with slight drift",
+    "sun_rays": "Yellow beams that pulse/glow as warning"
+  },
+  "audio": {
+    "required": false,
+    "optional": [
+      { "event": "catch_snowflake", "description": "Soft chime" },
+      { "event": "catch_big", "description": "Sparkle sound" },
+      { "event": "hit_sun", "description": "Sizzle/melt sound" }
+    ]
+  },
+  "instructions_text": "¡Atrapa los copos de nieve! Evita los rayos de sol que derriten tu nieve.",
+  "implementation_notes": [
+    "Coco moves along bottom of screen only (horizontal)",
+    "Items spawn at random X positions at top, fall down",
+    "Collision detection: item Y reaches Coco's Y and X overlaps",
+    "Timer display shows countdown from 60",
+    "Snow count display shows current score",
+    "Optional: snow accumulates visually as you collect more"
+  ],
+  "after_implementation": {
+    "update_available_games": "Add 3 to availableGames array",
+    "test_on_mobile": true,
+    "test_on_desktop": true
+  }
+}
