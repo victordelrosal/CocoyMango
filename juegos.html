@@ -1331,21 +1331,25 @@
 
     // ==================== GAME CARD ====================
 
+    // Track which games are implemented
+    const availableGames = [1, 6]; // Game 1 and Game 6 are available
+
     const GameCard = ({ game, progress, onPlay }) => {
       const imgNum = String(game.id).padStart(2, '0');
+      const isAvailable = availableGames.includes(game.id);
 
       return (
         <div
-          className="game-card bg-white rounded-2xl overflow-hidden shadow-lg cursor-pointer"
-          onClick={onPlay}
+          className={`game-card bg-white rounded-2xl overflow-hidden shadow-lg ${isAvailable ? 'cursor-pointer' : 'cursor-not-allowed opacity-80'}`}
+          onClick={isAvailable ? onPlay : undefined}
         >
           <div className="relative">
             <img
               src={`imagenes/imagen${imgNum}.png`}
               alt={game.title}
-              className="w-full h-32 sm:h-40 object-cover"
+              className={`w-full h-32 sm:h-40 object-cover ${!isAvailable ? 'grayscale-[30%]' : ''}`}
             />
-            <div className={`absolute top-2 right-2 w-10 h-10 rounded-full bg-gradient-to-br ${game.color} flex items-center justify-center text-xl shadow`}>
+            <div className={`absolute top-2 right-2 w-10 h-10 rounded-full bg-gradient-to-br ${game.color} flex items-center justify-center text-xl shadow ${!isAvailable ? 'grayscale' : ''}`}>
               {game.emoji}
             </div>
             {progress?.stars > 0 && (
@@ -1353,12 +1357,24 @@
                 <StarRating stars={progress.stars} />
               </div>
             )}
+            {!isAvailable && (
+              <div className="absolute bottom-2 right-2 bg-gray-600/80 rounded-full px-2 py-1">
+                <span className="text-xs text-white font-medium">Próximamente</span>
+              </div>
+            )}
           </div>
           <div className="p-3">
             <h3 className="font-bold text-sm sm:text-base truncate">{game.title}</h3>
             <p className="text-xs text-gray-500">{game.type}</p>
-            <button className="play-btn w-full mt-2 py-2 text-white rounded-full font-bold text-sm">
-              ▶ Jugar
+            <button
+              className={`w-full mt-2 py-2 rounded-full font-bold text-sm transition-all ${
+                isAvailable
+                  ? 'play-btn text-white hover:scale-105'
+                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+              }`}
+              disabled={!isAvailable}
+            >
+              {isAvailable ? '▶ Jugar' : '🔒 Próximamente'}
             </button>
           </div>
         </div>
