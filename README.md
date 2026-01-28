@@ -39,4 +39,4 @@ CocoyMango/
 
 ## Live Site
 
-Available at: [cocoymango.net](https://cocoymango.net)
+Available at: [victordelrosal.com/CocoyMango](https://victordelrosal.com/CocoyMango)
