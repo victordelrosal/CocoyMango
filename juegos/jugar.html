@@ -222,14 +222,14 @@
 
     // ---------- TAP ----------
     function updateTap(dt){
-      const interval=Math.max(0.42,0.95-elapsed*0.01);
+      const interval=Math.max(0.5,1.0-elapsed*0.009);
       spawnTimer-=dt; if(spawnTimer<=0){spawnTap();spawnTimer=interval;}
       for(let i=taps.length-1;i>=0;i--){const o=taps[i];o.life-=dt;o.t+=dt;
         o.scale=o.life>o.max-0.18?(o.max-o.life)/0.18:(o.life<0.22?o.life/0.22:1);
         if(o.life<=0)taps.splice(i,1);}
     }
-    function spawnTap(){const r=Math.min(W,H)*0.085;
-      taps.push({x:r+Math.random()*(W-2*r),y:r+90+Math.random()*(H-2*r-130),r,em:G.items[(Math.random()*G.items.length)|0],life:1.25,max:1.25,t:0,scale:0});}
+    function spawnTap(){const r=Math.max(46,Math.min(W,H)*0.11);
+      taps.push({x:r+Math.random()*(W-2*r),y:r+96+Math.random()*(H-2*r-140),r,em:G.items[(Math.random()*G.items.length)|0],life:1.6,max:1.6,t:0,scale:0});}
     function tapAt(x,y){for(let i=taps.length-1;i>=0;i--){const o=taps[i];if((x-o.x)**2+(y-o.y)**2<=(o.r*1.15)**2){
       taps.splice(i,1);addScore(1);burst(o.x,o.y,'#ffd23f',14);popText(o.x,o.y-o.r,'+1','#b45309');sGood();return;}}}
     function drawTap(){
