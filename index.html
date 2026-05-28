@@ -222,7 +222,7 @@
               </div>
               {/* Floating badge */}
               <div className="absolute -bottom-2 -right-2 bg-mango-400 text-ink-900 text-xs font-bold px-2.5 py-1 rounded-full shadow-lg font-display">
-                13 historias
+                {STORIES.length} historias
               </div>
             </div>
           </div>
@@ -255,7 +255,7 @@
     // ═══════════════════════════════════════════════════════════
     const TabBar = ({ active, onChange, dark }) => {
       const tabs = [
-        { key:'historias', icon:'📖', label:'Historias', badge:'13' },
+        { key:'historias', icon:'📖', label:'Historias', badge: String(STORIES.length) },
         { key:'juegos', icon:'🎮', label:'Juegos', badge: readyCount > 0 ? `${readyCount} listos` : '0' },
       ];
       return (
@@ -292,10 +292,21 @@
     // ═══════════════════════════════════════════════════════════
     //  STORY CARD
     // ═══════════════════════════════════════════════════════════
-    const StoryCard = ({ story, title, index, dark, onClick }) => (
+    const StoryCard = ({ story, title, index, dark, onClick }) => {
+      const [imgError, setImgError] = useState(false);
+      return (
       <article onClick={onClick} className={`card cursor-pointer rounded-2xl overflow-hidden ${dark ? 'bg-ink-900 ring-1 ring-white/5' : 'bg-white ring-1 ring-black/[0.04]'}`}>
         <div className="relative aspect-[4/3] overflow-hidden">
-          <img src={story.imgFile} alt={title} className="card-img w-full h-full object-cover" loading="lazy" />
+          {imgError ? (
+            <div className="w-full h-full flex flex-col items-center justify-center gap-1 bg-red-50 text-red-600 p-2 text-center">
+              <span className="text-2xl">\u26A0\uFE0F</span>
+              <span className="font-display font-bold text-[11px] leading-tight">Falta la ilustraci\u00F3n</span>
+              <span className="font-mono text-[9px] opacity-70 break-all">{story.imgFile}</span>
+            </div>
+          ) : (
+            <img src={story.imgFile} alt={title} className="card-img w-full h-full object-cover" loading="lazy"
+              onError={() => { console.error(`[Coco y Mango] Falta la imagen de la historia ${index + 1}: ${story.imgFile}`); setImgError(true); }} />
+          )}
           {/* Number badge */}
           <div className="absolute top-2.5 left-2.5">
             <div className="w-8 h-8 rounded-xl bg-black/40 backdrop-blur-md flex items-center justify-center text-white text-xs font-display font-bold ring-1 ring-white/10">
@@ -317,7 +328,8 @@
           </div>
         </div>
       </article>
-    );
+      );
+    };
 
     // ═══════════════════════════════════════════════════════════
     //  GAME CARD
@@ -380,6 +392,7 @@
       const [fs, setFs] = useState(1);
       const [ff, setFf] = useState(0);
       const [progress, setProgress] = useState(0);
+      const [imgError, setImgError] = useState(false);
 
       const sizes = ['text-base leading-7', 'text-lg leading-8', 'text-xl leading-9', 'text-2xl leading-10'];
       const fonts = [
@@ -398,7 +411,7 @@
         return () => window.removeEventListener('scroll', onScroll);
       }, []);
 
-      useEffect(() => { window.scrollTo({ top: 0 }); }, [index]);
+      useEffect(() => { window.scrollTo({ top: 0 }); setImgError(false); }, [index]);
 
       return (
         <div className={`min-h-screen transition-colors duration-300 ${dark ? 'bg-ink-950' : 'bg-ink-50'}`}>
@@ -439,7 +452,16 @@
           <article className="max-w-2xl mx-auto px-5 pt-8 pb-36">
             {/* Image */}
             <div className="rounded-2xl overflow-hidden shadow-xl ring-1 ring-black/5 mb-8 anim-scale-in">
-              <img src={story.imgFile} alt={title} className="w-full h-auto" />
+              {imgError ? (
+                <div className="w-full aspect-[4/3] flex flex-col items-center justify-center gap-2 bg-red-50 text-red-600 p-6 text-center">
+                  <span className="text-4xl">⚠️</span>
+                  <span className="font-display font-bold text-base">Falta la ilustración de esta historia</span>
+                  <span className="font-mono text-xs opacity-70 break-all">{story.imgFile}</span>
+                </div>
+              ) : (
+                <img src={story.imgFile} alt={title} className="w-full h-auto"
+                  onError={() => { console.error(`[Coco y Mango] Falta la imagen de la historia ${index + 1}: ${story.imgFile}`); setImgError(true); }} />
+              )}
             </div>
 
             {/* Title */}
