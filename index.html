@@ -173,13 +173,20 @@
 
     const readyCount = GAMES.filter(g => g.ready).length;
 
-    // Comics: each story becomes a comic. Episode 1 is live; the rest are on the way.
-    const COMICS = STORIES.map((s, i) => ({
-      num: s.num,
-      ready: i === 0,
-      href: `comics/comic${s.num}.html`,
-      cover: i === 0 ? 'comics/ep01/panel02.png' : s.imgFile,
-    }));
+    // Comics: each story becomes a comic. Add a cover here as each comic ships.
+    const COMIC_COVERS = {
+      '01': 'comics/ep01/panel02.png',
+      '02': 'comics/ep02/panel06.png',
+    };
+    const COMICS = STORIES.map((s) => {
+      const ready = !!COMIC_COVERS[s.num];
+      return {
+        num: s.num,
+        ready,
+        href: `comics/comic${s.num}.html`,
+        cover: ready ? COMIC_COVERS[s.num] : s.imgFile,
+      };
+    });
     const comicsReady = COMICS.filter(c => c.ready).length;
 
     // ═══════════════════════════════════════════════════════════
@@ -535,6 +542,15 @@
                 <div className={`text-center pt-8 pb-2 font-display text-sm font-medium tracking-widest uppercase ${dark ? 'text-gray-600' : 'text-gray-300'}`}>
                   — fin —
                 </div>
+                {/* Read-as-comic CTA (only when this story has a published comic) */}
+                {COMICS[index] && COMICS[index].ready && (
+                  <div className="text-center pt-8">
+                    <a href={COMICS[index].href}
+                      className="inline-flex items-center gap-2 px-5 py-3 rounded-full font-display font-bold text-white bg-gradient-to-r from-mango-500 to-orange-500 shadow-lg shadow-mango-500/30 hover:scale-105 active:scale-95 transition-transform">
+                      💥 Leer este cuento como cómic
+                    </a>
+                  </div>
+                )}
               </div>
             )}
           </article>
