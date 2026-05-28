@@ -678,8 +678,25 @@
               </div>
             )}
             {tab === 'juegos' && (
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3.5 sm:gap-5 stagger">
-                {GAMES.map(g => <GameCard key={g.id} game={g} dark={dark} />)}
+              <div>
+                {/* Featured new game */}
+                <a href="juegos/atrapa-mangos.html" className="card block relative overflow-hidden rounded-3xl mb-6 ring-1 ring-black/5 shadow-xl">
+                  <div className="relative flex items-center gap-3 p-5 sm:p-7 bg-gradient-to-br from-sky-400 via-sky-300 to-emerald-300">
+                    <div className="flex-1 min-w-0">
+                      <span className="inline-block text-[11px] font-display font-bold px-2.5 py-1 rounded-full bg-white/90 text-orange-600 shadow mb-2">💥 NUEVO</span>
+                      <h3 className="font-display font-bold text-white text-xl sm:text-3xl leading-tight" style={{textShadow:'0 2px 8px rgba(0,0,0,0.18)'}}>¡Atrapa los mangos!</h3>
+                      <p className="font-display text-white/95 text-xs sm:text-sm mt-1">Ayuda a Coco a atrapar la fruta que cae.</p>
+                      <span className="inline-flex items-center gap-1.5 mt-3 px-4 py-2 rounded-full bg-white text-emerald-700 font-display font-bold text-sm shadow-lg">Jugar ▶</span>
+                    </div>
+                    <img src="juegos/assets/coco-catcher.png" alt="Coco" className="w-24 sm:w-36 h-auto shrink-0" style={{filter:'drop-shadow(0 10px 16px rgba(0,0,0,0.25))'}} />
+                  </div>
+                </a>
+                <p className={`text-center font-display text-xs mb-4 ${dark ? 'text-gray-500' : 'text-gray-400'}`}>
+                  Iremos renovando todos los juegos, uno por uno ✨
+                </p>
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3.5 sm:gap-5 stagger">
+                  {GAMES.map(g => <GameCard key={g.id} game={g} dark={dark} />)}
+                </div>
               </div>
             )}
           </main>

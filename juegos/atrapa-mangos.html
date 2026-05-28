@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>¡Atrapa los mangos! · Coco y Mango</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#7cc6f2">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🥭</text></svg>">
+  <meta property="og:title" content="¡Atrapa los mangos! · Coco y Mango">
+  <meta property="og:description" content="Ayuda a Coco a atrapar la fruta que cae. ¡Un juego de Coco y Mango!">
+  <meta property="og:type" content="website">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;-webkit-tap-highlight-color:transparent}
+    html,body{height:100%;overflow:hidden;font-family:'Fredoka',system-ui,sans-serif;background:#7cc6f2;
+      -webkit-user-select:none;user-select:none;touch-action:none}
+    #game{position:fixed;inset:0;display:block;width:100%;height:100%}
+
+    .ui{position:fixed;z-index:10;pointer-events:none}
+    /* HUD */
+    #hud{top:0;left:0;right:0;display:flex;align-items:center;gap:10px;padding:max(12px,env(safe-area-inset-top)) 14px 12px}
+    .pill{display:inline-flex;align-items:center;gap:7px;background:rgba(255,255,255,.85);
+      backdrop-filter:blur(6px);border-radius:999px;padding:7px 14px;font-weight:700;color:#0e2a3a;
+      box-shadow:0 4px 14px rgba(0,0,0,.12);font-size:clamp(15px,4.5vw,20px)}
+    .pill .ico{font-size:1.1em}
+    #score{color:#b45309}
+    #time .ico{color:#1d4ed8}
+    #spacer{flex:1}
+    #muteBtn{pointer-events:auto;cursor:pointer;border:none}
+    #muteBtn:active{transform:scale(.9)}
+    #scorePop{position:fixed;z-index:11;font-family:'Bangers';color:#fff;-webkit-text-stroke:2px #b45309;
+      font-size:34px;opacity:0;transition:none;pointer-events:none}
+
+    /* Overlays */
+    .screen{position:fixed;inset:0;z-index:20;display:flex;flex-direction:column;align-items:center;justify-content:center;
+      gap:14px;text-align:center;padding:24px;background:radial-gradient(120% 90% at 50% 18%,rgba(124,198,242,.5),rgba(30,80,120,.78))}
+    .screen.hidden{display:none}
+    .title{font-family:'Bangers';color:#fff;line-height:.95;letter-spacing:.01em;
+      font-size:clamp(2.6rem,12vw,5.5rem);text-shadow:4px 4px 0 #22c55e,8px 8px 0 rgba(0,0,0,.28)}
+    .title .l2{display:block;color:#ffd23f;text-shadow:4px 4px 0 #b45309,8px 8px 0 rgba(0,0,0,.28)}
+    .mascot{width:clamp(150px,40vw,240px);height:auto;filter:drop-shadow(0 10px 18px rgba(0,0,0,.3));animation:bob 2.2s ease-in-out infinite}
+    @keyframes bob{0%,100%{transform:translateY(0) rotate(-2deg)}50%{transform:translateY(-12px) rotate(2deg)}}
+    .how{display:flex;gap:18px;flex-wrap:wrap;justify-content:center;color:#eaf6ff;font-weight:600;font-size:clamp(14px,4vw,18px);max-width:420px}
+    .how div{display:flex;flex-direction:column;align-items:center;gap:4px;width:120px}
+    .how .e{font-size:2rem}
+    .btn{pointer-events:auto;cursor:pointer;border:none;font-family:'Fredoka';font-weight:700;color:#0e2a3a;
+      background:linear-gradient(180deg,#ffe066,#ffb703);border-radius:999px;
+      padding:16px 40px;font-size:clamp(20px,6vw,30px);box-shadow:0 8px 0 #c77b00,0 14px 24px rgba(0,0,0,.28);
+      transition:transform .08s,box-shadow .08s}
+    .btn:active{transform:translateY(5px);box-shadow:0 3px 0 #c77b00,0 6px 12px rgba(0,0,0,.28)}
+    .btn.green{background:linear-gradient(180deg,#86efac,#22c55e);box-shadow:0 8px 0 #15803d,0 14px 24px rgba(0,0,0,.28)}
+    .btn.green:active{box-shadow:0 3px 0 #15803d,0 6px 12px rgba(0,0,0,.28)}
+    .endscore{font-family:'Bangers';color:#fff;font-size:clamp(2rem,9vw,3.4rem);text-shadow:3px 3px 0 #b45309}
+    .stars{font-size:clamp(2.4rem,11vw,4rem);letter-spacing:6px;filter:drop-shadow(0 4px 8px rgba(0,0,0,.3))}
+    .best{color:#eaf6ff;font-weight:600;font-size:clamp(14px,4vw,18px)}
+    .back{pointer-events:auto;color:#eaf6ff;text-decoration:none;font-weight:600;font-size:15px;opacity:.9;margin-top:6px}
+    .back:hover{opacity:1}
+    .row{display:flex;gap:14px;flex-wrap:wrap;justify-content:center;align-items:center}
+  </style>
+</head>
+<body>
+  <canvas id="game"></canvas>
+
+  <div id="hud" class="ui hidden">
+    <span class="pill" id="score"><span class="ico">🥭</span><span id="scoreVal">0</span></span>
+    <span id="spacer"></span>
+    <span class="pill" id="time"><span class="ico">⏱️</span><span id="timeVal">60</span></span>
+    <button class="pill" id="muteBtn" aria-label="sonido">🔊</button>
+  </div>
+  <div id="scorePop"></div>
+
+  <!-- Start -->
+  <div class="screen" id="startScreen">
+    <h1 class="title">¡Atrapa<span class="l2">los mangos!</span></h1>
+    <img class="mascot" id="mascotImg" src="assets/coco-catcher.png" alt="Coco">
+    <div class="how">
+      <div><span class="e">👉</span>Mueve a Coco</div>
+      <div><span class="e">🧺</span>Atrapa la fruta</div>
+      <div><span class="e">⭐</span>¡La dorada vale más!</div>
+    </div>
+    <button class="btn green" id="playBtn">JUGAR ▶</button>
+    <a class="back" href="../index.html">← Volver a Coco y Mango</a>
+  </div>
+
+  <!-- End -->
+  <div class="screen hidden" id="endScreen">
+    <h2 class="title" style="font-size:clamp(2.2rem,10vw,4rem)">¡GENIAL!</h2>
+    <div class="stars" id="endStars">⭐⭐⭐</div>
+    <div class="endscore">Atrapaste <span id="endScore">0</span> 🥭</div>
+    <div class="best" id="endBest"></div>
+    <div class="row">
+      <button class="btn" id="againBtn">¡Otra vez! ↻</button>
+    </div>
+    <a class="back" href="../index.html">← Volver a Coco y Mango</a>
+  </div>
+
+  <script>
+  (function(){
+    const cv = document.getElementById('game');
+    const ctx = cv.getContext('2d');
+    let W=0,H=0,DPR=1;
+    function resize(){
+      DPR=Math.min(window.devicePixelRatio||1,2);
+      W=window.innerWidth; H=window.innerHeight;
+      cv.width=W*DPR; cv.height=H*DPR;
+      cv.style.width=W+'px'; cv.style.height=H+'px';
+      ctx.setTransform(DPR,0,0,DPR,0,0);
+    }
+    window.addEventListener('resize',resize); resize();
+
+    // ---- assets ----
+    const coco = new Image(); coco.src='assets/coco-catcher.png'; let cocoReady=false;
+    coco.onload=()=>cocoReady=true;
+
+    // ---- audio (WebAudio, no files) ----
+    let AC=null, muted=(localStorage.getItem('cym_mute')==='1');
+    const muteBtn=document.getElementById('muteBtn');
+    muteBtn.textContent=muted?'🔇':'🔊';
+    function ac(){ if(!AC){ try{AC=new (window.AudioContext||window.webkitAudioContext)();}catch(e){} } return AC; }
+    function blip(freq,dur,type,vol){
+      if(muted) return; const a=ac(); if(!a) return;
+      const o=a.createOscillator(), g=a.createGain();
+      o.type=type||'sine'; o.frequency.value=freq;
+      g.gain.value=(vol||0.18); o.connect(g); g.connect(a.destination);
+      const t=a.currentTime; o.start(t);
+      g.gain.exponentialRampToValueAtTime(0.0001,t+(dur||0.18));
+      o.stop(t+(dur||0.18)+0.02);
+    }
+    function catchSound(){ blip(620,0.10,'triangle',0.2); setTimeout(()=>blip(880,0.12,'triangle',0.2),60); }
+    function goldSound(){ [660,880,1175,1568].forEach((f,i)=>setTimeout(()=>blip(f,0.12,'triangle',0.2),i*55)); }
+    function missSound(){ blip(150,0.14,'sine',0.12); }
+    function cheer(){ [523,659,784,1047].forEach((f,i)=>setTimeout(()=>blip(f,0.2,'triangle',0.22),i*120)); }
+    muteBtn.addEventListener('click',(e)=>{ e.stopPropagation(); muted=!muted; localStorage.setItem('cym_mute',muted?'1':'0'); muteBtn.textContent=muted?'🔇':'🔊'; if(!muted) blip(660,0.1,'triangle',0.2); });
+
+    // ---- world / state ----
+    const FRUITS=['🥭','🥥','🍓','🍌'];
+    let state='start';            // start | play | end
+    let score=0, timeLeft=60, lastT=0, elapsed=0;
+    let fruits=[], particles=[], confetti=[];
+    let cocoX=0, targetX=0, cocoSize=0, cocoBottom=0, basketY=0, catchHalf=0, squash=0;
+    let spawnTimer=0, rainTimer=0, raining=0, shake=0;
+    let keyL=false,keyR=false;
+    const best=()=>parseInt(localStorage.getItem('cym_atrapa_best')||'0',10);
+
+    function layout(){
+      cocoSize = Math.max(110, Math.min(W*0.22, 168));
+      cocoBottom = H - Math.max(40,H*0.06)*0.25;      // Coco sits slightly into the grass
+      basketY = (cocoBottom - cocoSize) + cocoSize*0.52; // basket mouth height
+      catchHalf = cocoSize*0.36;
+    }
+    layout(); window.addEventListener('resize',layout);
+
+    function reset(){
+      score=0; timeLeft=60; elapsed=0; fruits=[]; particles=[]; confetti=[];
+      cocoX=W/2; targetX=W/2; spawnTimer=0; rainTimer=6; raining=0; shake=0;
+      document.getElementById('scoreVal').textContent='0';
+      document.getElementById('timeVal').textContent='60';
+    }
+
+    // ---- input ----
+    function pointer(x){ targetX=Math.max(cocoSize*0.4,Math.min(W-cocoSize*0.4,x)); }
+    function onMove(e){ if(state!=='play')return; const t=e.touches?e.touches[0]:e; pointer(t.clientX); }
+    cv.addEventListener('mousemove',onMove);
+    cv.addEventListener('touchstart',onMove,{passive:true});
+    cv.addEventListener('touchmove',(e)=>{onMove(e);},{passive:true});
+    window.addEventListener('keydown',(e)=>{ if(e.key==='ArrowLeft')keyL=true; if(e.key==='ArrowRight')keyR=true; });
+    window.addEventListener('keyup',(e)=>{ if(e.key==='ArrowLeft')keyL=false; if(e.key==='ArrowRight')keyR=false; });
+
+    // ---- spawning ----
+    function spawnFruit(forceGold){
+      const gold = forceGold || Math.random()<0.06;
+      fruits.push({
+        x: cocoSize*0.4 + Math.random()*(W-cocoSize*0.8),
+        y: -40, vy: 0,
+        rot: Math.random()*6.28, vr:(Math.random()-0.5)*4,
+        gold, emoji: gold?'⭐':FRUITS[(Math.random()*FRUITS.length)|0],
+        sz: gold? cocoSize*0.5 : cocoSize*0.46,
+        caught:false
+      });
+    }
+    function burst(x,y,color,n){
+      for(let i=0;i<n;i++){ const a=Math.random()*6.28, s=2+Math.random()*5;
+        particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s-2,life:1,color}); }
+    }
+    function popText(x,y,txt,color){
+      const el=document.getElementById('scorePop');
+      el.textContent=txt; el.style.color='#fff'; el.style.webkitTextStroke='2px '+(color||'#b45309');
+      el.style.left=x+'px'; el.style.top=y+'px'; el.style.opacity='1';
+      el.style.transition='none'; el.style.transform='translate(-50%,0) scale(1.2)';
+      requestAnimationFrame(()=>{ el.style.transition='all .7s ease'; el.style.opacity='0'; el.style.transform='translate(-50%,-46px) scale(1)'; });
+    }
+
+    // ---- loop ----
+    function update(dt){
+      elapsed+=dt;
+      // coco move (follow target + keys)
+      if(keyL) targetX-=W*0.9*dt; if(keyR) targetX+=W*0.9*dt;
+      targetX=Math.max(cocoSize*0.4,Math.min(W-cocoSize*0.4,targetX));
+      cocoX += (targetX-cocoX)*Math.min(1,dt*14);
+      if(squash>0) squash=Math.max(0,squash-dt*4);
+      if(shake>0) shake=Math.max(0,shake-dt*3);
+
+      // timer
+      timeLeft-=dt;
+      if(timeLeft<=0){ timeLeft=0; endGame(); return; }
+      document.getElementById('timeVal').textContent=Math.ceil(timeLeft);
+
+      // difficulty ramp
+      const speed = 150 + elapsed*7;            // px/s falling
+      const interval = Math.max(0.45, 1.1 - elapsed*0.012);
+      spawnTimer-=dt;
+      if(spawnTimer<=0){ spawnFruit(false); spawnTimer=interval; }
+      // mango rain bursts
+      rainTimer-=dt;
+      if(rainTimer<=0 && raining<=0){ raining=2.2; rainTimer=16; }
+      if(raining>0){ raining-=dt; if(Math.random()<dt*14) spawnFruit(false); }
+
+      // fruits
+      for(let i=fruits.length-1;i>=0;i--){
+        const f=fruits[i];
+        f.y += speed*dt; f.rot += f.vr*dt;
+        const dx=Math.abs(f.x-cocoX);
+        if(!f.caught && f.y>=basketY && f.y<=basketY+cocoSize*0.55 && dx<=catchHalf){
+          f.caught=true; fruits.splice(i,1);
+          const val=f.gold?3:1; score+=val;
+          document.getElementById('scoreVal').textContent=score;
+          squash=1; burst(f.x,basketY,f.gold?'#ffd23f':'#ff8a3d',f.gold?22:12);
+          popText(cocoX,basketY-cocoSize*0.4,'+'+val,f.gold?'#b8860b':'#b45309');
+          if(f.gold){ goldSound(); shake=1; } else catchSound();
+          continue;
+        }
+        if(f.y>H+50){ fruits.splice(i,1); if(!f.caught){ burst(f.x,H-6,'#9ad27a',6); missSound(); } }
+      }
+      // particles
+      for(let i=particles.length-1;i>=0;i--){ const p=particles[i];
+        p.vy+=0.3; p.x+=p.vx; p.y+=p.vy; p.life-=dt*1.6; if(p.life<=0) particles.splice(i,1); }
+      // confetti (end)
+      for(let i=confetti.length-1;i>=0;i--){ const c=confetti[i];
+        c.vy+=0.15; c.x+=c.vx; c.y+=c.vy; c.rot+=c.vr; if(c.y>H+30) confetti.splice(i,1); }
+    }
+
+    function drawBackground(){
+      const g=ctx.createLinearGradient(0,0,0,H);
+      g.addColorStop(0,'#8fd0f5'); g.addColorStop(0.55,'#bfe6ff'); g.addColorStop(1,'#eaf7e6');
+      ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+      // sun
+      ctx.save(); ctx.globalAlpha=0.9; ctx.fillStyle='#ffe066';
+      ctx.beginPath(); ctx.arc(W*0.84,H*0.16,Math.min(W,H)*0.09,0,6.29); ctx.fill(); ctx.restore();
+      // clouds (slow drift)
+      const cd=(elapsed*14)%(W+260)-260;
+      cloud(cd,H*0.18,1); cloud((cd+W*0.55)%(W+260)-130,H*0.30,0.8); cloud((cd+W*0.8)%(W+260)-200,H*0.12,0.6);
+      // hills
+      ctx.fillStyle='#bfe3a0'; hill(W*0.25,H*0.86,W*0.5);
+      ctx.fillStyle='#a9d98c'; hill(W*0.78,H*0.88,W*0.6);
+      // ground
+      ctx.fillStyle='#7cc36a'; ctx.fillRect(0,H-Math.max(40,H*0.06),W,H);
+    }
+    function cloud(x,y,s){ ctx.save(); ctx.fillStyle='rgba(255,255,255,.92)'; const r=34*s;
+      ctx.beginPath(); ctx.arc(x,y,r,0,6.29); ctx.arc(x+r,y+6,r*0.8,0,6.29); ctx.arc(x-r,y+8,r*0.7,0,6.29); ctx.arc(x+r*0.4,y-r*0.6,r*0.7,0,6.29); ctx.fill(); ctx.restore(); }
+    function hill(cx,by,w){ ctx.beginPath(); ctx.moveTo(cx-w/2,by); ctx.quadraticCurveTo(cx,by-w*0.5,cx+w/2,by); ctx.lineTo(cx+w/2,H); ctx.lineTo(cx-w/2,H); ctx.closePath(); ctx.fill(); }
+
+    function drawFruit(f){
+      ctx.save(); ctx.translate(f.x,f.y); ctx.rotate(f.rot);
+      ctx.font=f.sz+'px serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+      if(f.gold){ ctx.shadowColor='#ffd23f'; ctx.shadowBlur=18; }
+      ctx.fillText(f.emoji,0,0); ctx.restore();
+    }
+    function drawCoco(){
+      const sx = (shake>0? (Math.random()-0.5)*8*shake : 0);
+      const sc = 1 - squash*0.12;
+      const w=cocoSize, h=cocoSize*sc;
+      const top = cocoBottom - h;
+      if(cocoReady){ ctx.drawImage(coco, cocoX - w/2 + sx, top, w, h); }
+      else { ctx.font=(cocoSize*0.8)+'px serif'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText('🦎',cocoX,cocoBottom-cocoSize*0.4); }
+    }
+    function drawParticles(){
+      particles.forEach(p=>{ ctx.save(); ctx.globalAlpha=Math.max(0,p.life); ctx.fillStyle=p.color;
+        ctx.beginPath(); ctx.arc(p.x,p.y,4+3*p.life,0,6.29); ctx.fill(); ctx.restore(); });
+    }
+    function drawConfetti(){
+      confetti.forEach(c=>{ ctx.save(); ctx.translate(c.x,c.y); ctx.rotate(c.rot); ctx.fillStyle=c.color;
+        ctx.fillRect(-5,-8,10,16); ctx.restore(); });
+    }
+
+    function render(){
+      drawBackground();
+      fruits.forEach(drawFruit);
+      drawParticles();
+      if(state!=='start') drawCoco();
+      if(state==='end') drawConfetti();
+    }
+
+    function frame(t){
+      const dt=Math.min(0.05,(t-lastT)/1000||0); lastT=t;
+      if(state==='play') update(dt);
+      else { // idle anims on overlays
+        for(let i=particles.length-1;i>=0;i--){const p=particles[i];p.vy+=0.3;p.x+=p.vx;p.y+=p.vy;p.life-=dt*1.6;if(p.life<=0)particles.splice(i,1);}
+        for(let i=confetti.length-1;i>=0;i--){const c=confetti[i];c.vy+=0.15;c.x+=c.vx;c.y+=c.vy;c.rot+=c.vr;if(c.y>H+30)confetti.splice(i,1);}
+        elapsed+=dt; // keep clouds drifting
+      }
+      render();
+      requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+
+    // ---- flow ----
+    const startScreen=document.getElementById('startScreen');
+    const endScreen=document.getElementById('endScreen');
+    const hud=document.getElementById('hud');
+    function startGame(){
+      ac(); reset(); state='play';
+      startScreen.classList.add('hidden'); endScreen.classList.add('hidden'); hud.classList.remove('hidden');
+    }
+    function endGame(){
+      state='end'; hud.classList.add('hidden');
+      const b=best(); if(score>b) localStorage.setItem('cym_atrapa_best',String(score));
+      document.getElementById('endScore').textContent=score;
+      const stars = score>=40?'⭐⭐⭐': score>=20?'⭐⭐':'⭐';
+      document.getElementById('endStars').textContent=stars;
+      document.getElementById('endBest').textContent = (score>b? '¡Nuevo récord! 🏆' : ('Tu récord: '+Math.max(b,score)+' 🥭'));
+      // confetti
+      const cols=['#ffd23f','#ff7b54','#22c55e','#4dabf7','#f06595','#fff'];
+      for(let i=0;i<140;i++) confetti.push({x:Math.random()*W,y:-Math.random()*H*0.5,vx:(Math.random()-0.5)*4,vy:Math.random()*3+1,rot:Math.random()*6.28,vr:(Math.random()-0.5)*0.4,color:cols[(Math.random()*cols.length)|0]});
+      endScreen.classList.remove('hidden');
+      cheer();
+    }
+    document.getElementById('playBtn').addEventListener('click',startGame);
+    document.getElementById('againBtn').addEventListener('click',startGame);
+
+    // optional autostart for testing
+    if(location.hash==='#play') setTimeout(startGame,300);
+  })();
+  </script>
+</body>
+</html>
