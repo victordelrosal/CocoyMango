@@ -155,23 +155,14 @@
       imgFile: `imagenes/imagen${String(i + 1).padStart(2, '0')}.png`,
     }));
 
-    const GAMES = [
-      { id:1, title:"El primer día de clases", type:"Calma", emoji:"⚡", grad:"from-amber-400 to-orange-500", ready:true },
-      { id:2, title:"El volcán", type:"Corredor", emoji:"🌋", grad:"from-red-500 to-orange-600", ready:true },
-      { id:3, title:"Nieve", type:"Atrapar", emoji:"❄️", grad:"from-sky-300 to-cyan-400", ready:true },
-      { id:4, title:"El cuervo y los primos", type:"Escondite", emoji:"🐦‍⬛", grad:"from-slate-500 to-slate-700", ready:true },
-      { id:5, title:"Avión de papel", type:"Vuelo", emoji:"✈️", grad:"from-blue-400 to-indigo-500", ready:true },
-      { id:6, title:"Agua de coco y mango", type:"Servir", emoji:"🥥", grad:"from-emerald-400 to-yellow-400", ready:true },
-      { id:7, title:"La alcantarilla", type:"Laberinto", emoji:"🕳️", grad:"from-stone-500 to-stone-700", ready:true },
-      { id:8, title:"El papalote", type:"Balance", emoji:"🪁", grad:"from-violet-400 to-pink-400", ready:true },
-      { id:9, title:"El tesoro perdido", type:"Puzzle", emoji:"🗺️", grad:"from-amber-500 to-yellow-500", ready:true },
-      { id:10, title:"La carrera de barquitos", type:"Carrera", emoji:"⛵", grad:"from-cyan-400 to-teal-500", ready:true },
-      { id:11, title:"El día de San Patricio", type:"Buscar", emoji:"☘️", grad:"from-green-500 to-emerald-600", ready:true },
-      { id:12, title:"La aventura al aeropuerto", type:"Tiempo", emoji:"🚌", grad:"from-indigo-400 to-purple-500", ready:true },
-      { id:13, title:"El boleto número 13", type:"Atrapar", emoji:"🎫", grad:"from-rose-400 to-red-500", ready:true },
-    ];
-
-    const readyCount = GAMES.filter(g => g.ready).length;
+    // One game per episode. kind/emoji mirror the templates in juegos/jugar.html.
+    const GAME_KIND = {
+      1:['Atrapa','🧺'], 2:['Toca','👆'], 3:['Atrapa','🧺'], 4:['Toca','👆'], 5:['Atrapa','🧺'],
+      6:['Memorama','🧠'], 7:['Memorama','🧠'], 8:['Atrapa','🧺'], 9:['Memorama','🧠'], 10:['Toca','👆'],
+      11:['Atrapa','🧺'], 12:['Toca','👆'], 13:['Atrapa','🧺'], 14:['Toca','👆'], 15:['Toca','👆'],
+      16:['Atrapa','🧺'], 17:['Atrapa','🧺'], 18:['Memorama','🧠'], 19:['Atrapa','🧺'], 20:['Toca','👆'],
+      21:['Atrapa','🧺'], 22:['Atrapa','🧺'], 23:['Toca','👆'],
+    };
 
     // Comics: each story becomes a comic. Add a cover here as each comic ships.
     const COMIC_COVERS = {
@@ -273,7 +264,7 @@
       const tabs = [
         { key:'historias', icon:'📖', label:'Historias', badge: String(STORIES.length) },
         { key:'comics', icon:'💥', label:'Cómics', badge: 'Nuevo' },
-        { key:'juegos', icon:'🎮', label:'Juegos', badge: readyCount > 0 ? `${readyCount} listos` : '0' },
+        { key:'juegos', icon:'🎮', label:'Juegos', badge: String(STORIES.length) },
       ];
       return (
         <nav className={`sticky top-0 z-40 border-b transition-colors ${dark ? 'glass-dark border-white/5' : 'glass border-ink-100/60'}`}>
@@ -349,53 +340,40 @@
     };
 
     // ═══════════════════════════════════════════════════════════
-    //  GAME CARD
+    //  GAME CARD (one game per episode → juegos/jugar.html?ep=N)
     // ═══════════════════════════════════════════════════════════
-    const GameCard = ({ game, dark }) => {
-      const imgNum = String(game.id).padStart(2, '0');
+    const GameCard = ({ story, title, index, dark }) => {
+      const ep = index + 1;
+      const kind = GAME_KIND[ep] || ['Jugar','🎮'];
       return (
-        <a
-          href={game.ready ? `juegos.html#game${game.id}` : undefined}
-          onClick={e => { if (!game.ready) e.preventDefault(); }}
-          className={`card block rounded-2xl overflow-hidden ${dark ? 'bg-ink-900 ring-1 ring-white/5' : 'bg-white ring-1 ring-black/[0.04]'} ${!game.ready ? 'opacity-50 saturate-50 cursor-not-allowed' : 'cursor-pointer'}`}
-        >
+        <a href={`juegos/jugar.html?ep=${ep}`}
+          className={`card block cursor-pointer rounded-2xl overflow-hidden ${dark ? 'bg-ink-900 ring-1 ring-white/5' : 'bg-white ring-1 ring-black/[0.04]'}`}>
           <div className="relative aspect-[4/3] overflow-hidden">
-            <img src={`imagenes/imagen${imgNum}.png`} alt={game.title} className="card-img w-full h-full object-cover" loading="lazy" />
-            {/* Color gradient overlay */}
-            <div className={`absolute inset-0 bg-gradient-to-br ${game.grad} mix-blend-multiply opacity-25`} />
-            {/* Emoji */}
-            <div className="absolute top-2.5 right-2.5 w-10 h-10 rounded-xl bg-white/80 backdrop-blur-md flex items-center justify-center text-xl shadow-sm ring-1 ring-black/5">
-              {game.emoji}
+            <img src={story.imgFile} alt={title} className="card-img w-full h-full object-cover" loading="lazy" />
+            <div className="absolute top-2.5 left-2.5 w-8 h-8 rounded-xl bg-black/40 backdrop-blur-md flex items-center justify-center text-white text-xs font-display font-bold ring-1 ring-white/10">
+              {ep}
             </div>
-            {/* Play overlay */}
-            {game.ready && (
-              <div className="absolute inset-0 flex items-center justify-center bg-black/0 hover:bg-black/30 transition-colors duration-300 group">
-                <div className="w-14 h-14 rounded-full bg-white/90 flex items-center justify-center shadow-xl opacity-0 group-hover:opacity-100 scale-75 group-hover:scale-100 transition-all duration-300">
-                  <svg className="w-6 h-6 text-coco-600 ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-                </div>
+            <div className="absolute top-2.5 right-2.5 w-10 h-10 rounded-xl bg-white/85 backdrop-blur-md flex items-center justify-center text-xl shadow-sm ring-1 ring-black/5">
+              {kind[1]}
+            </div>
+            <div className="absolute inset-0 flex items-center justify-center bg-black/0 hover:bg-black/30 transition-colors duration-300 group">
+              <div className="w-14 h-14 rounded-full bg-white/90 flex items-center justify-center shadow-xl opacity-0 group-hover:opacity-100 scale-75 group-hover:scale-100 transition-all duration-300">
+                <svg className="w-6 h-6 text-coco-600 ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
               </div>
-            )}
-            {!game.ready && (
-              <div className="absolute inset-x-0 bottom-0 p-2.5">
-                <span className="text-[10px] font-display font-semibold bg-black/50 text-white/80 px-2.5 py-1 rounded-full backdrop-blur-md">
-                  Próximamente
-                </span>
-              </div>
-            )}
+            </div>
+            <div className="absolute inset-x-0 bottom-0 h-14 bg-gradient-to-t from-black/35 to-transparent pointer-events-none" />
           </div>
           <div className="p-3.5 sm:p-4">
             <h3 className={`font-display font-semibold text-[13px] sm:text-[15px] leading-snug ${dark ? 'text-white' : 'text-ink-800'}`}>
-              {game.title}
+              {title || ' '}
             </h3>
             <div className="flex items-center gap-2 mt-2">
               <span className={`text-[10px] font-display font-semibold px-2 py-0.5 rounded-full ${dark ? 'bg-white/5 text-gray-400' : 'bg-ink-100 text-gray-500'}`}>
-                {game.type}
+                {kind[0]}
               </span>
-              {game.ready && (
-                <span className="relative text-[10px] font-display font-bold px-2 py-0.5 rounded-full bg-coco-500/10 text-coco-600 badge-live">
-                  Jugar
-                </span>
-              )}
+              <span className="relative text-[10px] font-display font-bold px-2 py-0.5 rounded-full bg-coco-500/10 text-coco-600 badge-live">
+                Jugar
+              </span>
             </div>
           </div>
         </a>
@@ -678,25 +656,10 @@
               </div>
             )}
             {tab === 'juegos' && (
-              <div>
-                {/* Featured new game */}
-                <a href="juegos/atrapa-mangos.html" className="card block relative overflow-hidden rounded-3xl mb-6 ring-1 ring-black/5 shadow-xl">
-                  <div className="relative flex items-center gap-3 p-5 sm:p-7 bg-gradient-to-br from-sky-400 via-sky-300 to-emerald-300">
-                    <div className="flex-1 min-w-0">
-                      <span className="inline-block text-[11px] font-display font-bold px-2.5 py-1 rounded-full bg-white/90 text-orange-600 shadow mb-2">💥 NUEVO</span>
-                      <h3 className="font-display font-bold text-white text-xl sm:text-3xl leading-tight" style={{textShadow:'0 2px 8px rgba(0,0,0,0.18)'}}>¡Atrapa los mangos!</h3>
-                      <p className="font-display text-white/95 text-xs sm:text-sm mt-1">Ayuda a Coco a atrapar la fruta que cae.</p>
-                      <span className="inline-flex items-center gap-1.5 mt-3 px-4 py-2 rounded-full bg-white text-emerald-700 font-display font-bold text-sm shadow-lg">Jugar ▶</span>
-                    </div>
-                    <img src="juegos/assets/coco-catcher.png" alt="Coco" className="w-24 sm:w-36 h-auto shrink-0" style={{filter:'drop-shadow(0 10px 16px rgba(0,0,0,0.25))'}} />
-                  </div>
-                </a>
-                <p className={`text-center font-display text-xs mb-4 ${dark ? 'text-gray-500' : 'text-gray-400'}`}>
-                  Iremos renovando todos los juegos, uno por uno ✨
-                </p>
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3.5 sm:gap-5 stagger">
-                  {GAMES.map(g => <GameCard key={g.id} game={g} dark={dark} />)}
-                </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3.5 sm:gap-5 stagger">
+                {STORIES.map((s, i) => (
+                  <GameCard key={s.id} story={s} title={titles[i]} index={i} dark={dark} />
+                ))}
               </div>
             )}
           </main>
