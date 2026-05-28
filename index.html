@@ -173,6 +173,15 @@
 
     const readyCount = GAMES.filter(g => g.ready).length;
 
+    // Comics: each story becomes a comic. Episode 1 is live; the rest are on the way.
+    const COMICS = STORIES.map((s, i) => ({
+      num: s.num,
+      ready: i === 0,
+      href: `comics/comic${s.num}.html`,
+      cover: i === 0 ? 'comics/ep01/panel02.png' : s.imgFile,
+    }));
+    const comicsReady = COMICS.filter(c => c.ready).length;
+
     // ═══════════════════════════════════════════════════════════
     //  SMALL COMPONENTS
     // ═══════════════════════════════════════════════════════════
@@ -256,6 +265,7 @@
     const TabBar = ({ active, onChange, dark }) => {
       const tabs = [
         { key:'historias', icon:'📖', label:'Historias', badge: String(STORIES.length) },
+        { key:'comics', icon:'💥', label:'Cómics', badge: 'Nuevo' },
         { key:'juegos', icon:'🎮', label:'Juegos', badge: readyCount > 0 ? `${readyCount} listos` : '0' },
       ];
       return (
@@ -384,6 +394,43 @@
         </a>
       );
     };
+
+    // ═══════════════════════════════════════════════════════════
+    //  COMIC CARD
+    // ═══════════════════════════════════════════════════════════
+    const ComicCard = ({ comic, title, index, dark }) => (
+      <a
+        href={comic.ready ? comic.href : undefined}
+        onClick={e => { if (!comic.ready) e.preventDefault(); }}
+        className={`card block rounded-2xl overflow-hidden ${dark ? 'bg-ink-900 ring-1 ring-white/5' : 'bg-white ring-1 ring-black/[0.04]'} ${!comic.ready ? 'opacity-50 saturate-50 cursor-not-allowed' : 'cursor-pointer'}`}
+      >
+        <div className="relative aspect-[4/3] overflow-hidden">
+          <img src={comic.cover} alt={title} className="card-img w-full h-full object-cover" loading="lazy" />
+          <div className="absolute top-2.5 left-2.5 w-8 h-8 rounded-xl bg-black/40 backdrop-blur-md flex items-center justify-center text-white text-xs font-display font-bold ring-1 ring-white/10">
+            {index + 1}
+          </div>
+          {comic.ready ? (
+            <div className="absolute top-2.5 right-2.5 text-[10px] font-display font-bold px-2.5 py-1 rounded-full bg-mango-400 text-ink-900 shadow-lg">💥 Cómic</div>
+          ) : (
+            <div className="absolute inset-x-0 bottom-0 p-2.5">
+              <span className="text-[10px] font-display font-semibold bg-black/50 text-white/80 px-2.5 py-1 rounded-full backdrop-blur-md">Próximamente</span>
+            </div>
+          )}
+          <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/40 to-transparent pointer-events-none" />
+        </div>
+        <div className="p-3.5 sm:p-4">
+          <h3 className={`font-display font-semibold text-[13px] sm:text-[15px] leading-snug ${dark ? 'text-white' : 'text-ink-800'}`}>
+            {title || ' '}
+          </h3>
+          <div className="flex items-center gap-1.5 mt-2">
+            <span className={`inline-block w-1.5 h-1.5 rounded-full ${dark ? 'bg-mango-400' : 'bg-mango-500'}`} />
+            <span className={`text-[11px] font-display font-medium ${comic.ready ? (dark ? 'text-mango-400' : 'text-mango-600') : (dark ? 'text-gray-500' : 'text-gray-400')}`}>
+              {comic.ready ? 'Leer cómic →' : `Episodio ${index + 1}`}
+            </span>
+          </div>
+        </div>
+      </a>
+    );
 
     // ═══════════════════════════════════════════════════════════
     //  STORY READER
@@ -590,13 +637,31 @@
           <TabBar active={tab} onChange={setTab} dark={dark} />
 
           <main className="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
-            {tab === 'historias' ? (
+            {tab === 'historias' && (
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3.5 sm:gap-5 stagger">
                 {STORIES.map((s, i) => (
                   <StoryCard key={s.id} story={s} title={titles[i]} index={i} dark={dark} onClick={() => setStory(i)} />
                 ))}
               </div>
-            ) : (
+            )}
+            {tab === 'comics' && (
+              <div>
+                <div className={`mb-5 sm:mb-6 rounded-2xl p-4 sm:p-5 text-center ${dark ? 'bg-mango-400/10 ring-1 ring-mango-400/20' : 'bg-mango-50 ring-1 ring-mango-200'}`}>
+                  <p className={`font-display font-semibold text-sm sm:text-base ${dark ? 'text-mango-300' : 'text-mango-700'}`}>
+                    💥 ¡Las historias ahora también son cómics!
+                  </p>
+                  <p className={`font-display text-xs mt-1 ${dark ? 'text-gray-400' : 'text-gray-500'}`}>
+                    Empezamos con el Episodio 1. Iremos publicando uno por uno.
+                  </p>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3.5 sm:gap-5 stagger">
+                  {COMICS.map((c, i) => (
+                    <ComicCard key={c.num} comic={c} title={titles[i]} index={i} dark={dark} />
+                  ))}
+                </div>
+              </div>
+            )}
+            {tab === 'juegos' && (
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3.5 sm:gap-5 stagger">
                 {GAMES.map(g => <GameCard key={g.id} game={g} dark={dark} />)}
               </div>

@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Coco y Mango · Cómic 1 — El primer día de clases</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0e1a12">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🦎</text></svg>">
+  <meta property="og:title" content="Coco y Mango · Cómic — El primer día de clases">
+  <meta property="og:description" content="El primer cómic de Coco y Mango. Léelo completo.">
+  <meta property="og:image" content="https://victordelrosal.com/CocoyMango/comics/ep01/panel05.png">
+  <meta property="og:type" content="article">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Comic+Neue:ital,wght@0,400;0,700;1,700&family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; }
+    :root{
+      --ink:#101010;
+      --paper:#fdf6e9;
+      --caption:#ffe9a8;
+      --coco:#22c55e;
+      --mango:#f59e0b;
+    }
+    html{ scroll-behavior:smooth; -webkit-text-size-adjust:100%; }
+    body{
+      font-family:'Comic Neue', cursive;
+      background:
+        radial-gradient(120% 80% at 50% -10%, #16271b 0%, #0e1a12 45%, #0a120d 100%);
+      background-attachment:fixed;
+      color:#fff; overflow-x:hidden; min-height:100vh;
+    }
+    /* halftone dot texture over the dark backdrop */
+    body::before{
+      content:''; position:fixed; inset:0; pointer-events:none; z-index:0;
+      background-image:radial-gradient(rgba(255,255,255,0.05) 1px, transparent 1px);
+      background-size:14px 14px; opacity:.6;
+    }
+
+    /* ── Top bar ── */
+    .topbar{
+      position:sticky; top:0; z-index:50;
+      display:flex; align-items:center; gap:12px;
+      padding:12px 16px;
+      background:rgba(10,18,13,.72); backdrop-filter:blur(14px) saturate(160%);
+      border-bottom:1px solid rgba(255,255,255,.08);
+    }
+    .topbar a.back{
+      display:inline-flex; align-items:center; gap:8px;
+      color:#fff; text-decoration:none; font-family:'Fredoka'; font-weight:600;
+      font-size:14px; padding:7px 13px; border-radius:999px;
+      background:rgba(255,255,255,.08); transition:background .2s;
+    }
+    .topbar a.back:hover{ background:rgba(255,255,255,.16); }
+    .topbar .ep{ margin-left:auto; font-family:'Fredoka'; font-weight:600; font-size:12px;
+      color:#9fe6b6; letter-spacing:.08em; text-transform:uppercase; }
+
+    /* ── Cover / title splash ── */
+    .cover{ position:relative; z-index:1; text-align:center; padding:48px 20px 8px; }
+    .cover .kicker{ font-family:'Fredoka'; font-weight:600; letter-spacing:.18em;
+      text-transform:uppercase; font-size:13px; color:var(--mango); }
+    .cover h1{
+      font-family:'Bangers'; font-weight:400; letter-spacing:.02em;
+      font-size:clamp(2.4rem, 9vw, 5rem); line-height:.95; margin:6px 0 4px;
+      color:#fff; text-shadow:4px 4px 0 var(--coco), 8px 8px 0 rgba(0,0,0,.35);
+    }
+    .cover .sub{ font-family:'Fredoka'; font-weight:500; color:#cfe9d8; font-size:clamp(1rem,3.5vw,1.4rem); }
+
+    /* ── Comic column ── */
+    .comic{ position:relative; z-index:1; max-width:880px; margin:0 auto; padding:24px 16px 8px;
+      display:flex; flex-direction:column; gap:26px; }
+
+    .panel{
+      position:relative; width:100%; aspect-ratio:16/9;
+      border:5px solid var(--ink); border-radius:7px; overflow:hidden;
+      background:#000; box-shadow:0 14px 34px rgba(0,0,0,.5);
+    }
+    .panel img{ width:100%; height:100%; object-fit:cover; display:block; }
+    .panel .err{
+      position:absolute; inset:0; display:none; flex-direction:column; align-items:center; justify-content:center;
+      gap:8px; background:#3a0d0d; color:#ffb4b4; text-align:center; padding:16px;
+      font-family:'Fredoka'; font-weight:600;
+    }
+
+    /* ── Lettering ── */
+    .balloon{
+      position:absolute; z-index:3;
+      background:#fff; color:var(--ink);
+      border:3px solid var(--ink); border-radius:20px;
+      padding:9px 14px; max-width:62%;
+      font-family:'Comic Neue', cursive; font-weight:700;
+      font-size:clamp(.74rem, 2.5vw, 1.05rem); line-height:1.15;
+      box-shadow:2px 3px 0 rgba(0,0,0,.25);
+    }
+    .balloon::after{ /* tail */
+      content:''; position:absolute; width:0; height:0;
+      border:11px solid transparent; border-top-color:#fff;
+      bottom:-20px; filter:drop-shadow(0 2px 0 var(--ink));
+    }
+    .balloon.tail-l::after{ left:22px; }
+    .balloon.tail-r::after{ right:22px; }
+    .balloon.tail-c::after{ left:50%; transform:translateX(-50%); }
+    .balloon .who{ display:block; font-family:'Fredoka'; font-weight:700;
+      font-size:.7em; text-transform:uppercase; letter-spacing:.05em; margin-bottom:1px; }
+    .balloon.coco .who{ color:#15803d; }
+    .balloon.mango .who{ color:#b45309; }
+    .balloon.maestra .who{ color:#7c3aed; }
+
+    .caption{
+      position:absolute; z-index:3;
+      background:var(--caption); color:#3a2a08;
+      border:3px solid var(--ink); border-radius:4px;
+      padding:7px 11px; max-width:70%;
+      font-family:'Comic Neue', cursive; font-weight:700; font-style:italic;
+      font-size:clamp(.7rem, 2.3vw, .98rem); line-height:1.15;
+      box-shadow:2px 3px 0 rgba(0,0,0,.25);
+    }
+
+    .sfx{
+      position:absolute; z-index:4;
+      font-family:'Bangers', cursive; line-height:.9;
+      color:#ffd23f; -webkit-text-stroke:2px var(--ink);
+      text-shadow:3px 3px 0 #e03e3e; transform:rotate(-7deg);
+      letter-spacing:.02em; white-space:nowrap;
+    }
+    .sfx.big{ font-size:clamp(2.6rem, 11vw, 6rem); }
+    .sfx.med{ font-size:clamp(1.4rem, 6vw, 3rem); }
+    .sfx.sm{ font-size:clamp(1rem, 4vw, 1.7rem); color:#fff; text-shadow:2px 2px 0 #e03e3e; -webkit-text-stroke:1.5px var(--ink); transform:rotate(-4deg); }
+
+    /* ── Ending ── */
+    .fin{ position:relative; z-index:1; text-align:center; padding:30px 20px 14px; }
+    .fin .word{ font-family:'Bangers'; font-size:clamp(2rem,8vw,3.6rem); color:#fff;
+      text-shadow:3px 3px 0 var(--mango); }
+    .fin .lesson{ font-family:'Comic Neue'; font-weight:700; color:#cfe9d8; max-width:520px; margin:8px auto 0; }
+    footer{ position:relative; z-index:1; text-align:center; padding:24px 16px 48px; color:#7fa68c;
+      font-family:'Fredoka'; font-size:13px; }
+    footer a{ color:#9fe6b6; }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <a class="back" href="../index.html">← Volver</a>
+    <span class="ep">Cómic · Episodio 1</span>
+  </div>
+
+  <div class="cover">
+    <div class="kicker">Coco y Mango · Cómic</div>
+    <h1>El primer día de clases</h1>
+    <div class="sub">Una aventura de Coco y Mango 🦎🇲🇽</div>
+  </div>
+
+  <main class="comic" id="comic">
+    <!-- Panels injected here -->
+  </main>
+
+  <div class="fin">
+    <div class="word">¡FIN!</div>
+    <p class="lesson">Ese día aprendieron una gran lección: antes de asustarse, hay que escuchar, observar y pensar. Hay que mantener la calma.</p>
+  </div>
+
+  <footer>
+    🦎 Coco y Mango · Hecho con amor en México 🇲🇽<br>
+    Más cómics, muy pronto. · <a href="../index.html">Ver todas las historias</a>
+  </footer>
+
+  <script>
+    // Each panel: image + its lettering (perfect Mexican Spanish, never baked into the art).
+    const PANELS = [
+      { img:'ep01/panel01.png', lettering:[
+        { type:'caption', text:'Era el primer día de clases de Coco.', style:'top:6%; left:4%;' },
+        { type:'balloon', who:'Sus papás', cls:'mango tail-r', text:'¡Buenos días, Coco! ¡Hoy es tu primer día de clases!', style:'top:8%; right:4%;' },
+      ]},
+      { img:'ep01/panel02.png', lettering:[
+        { type:'caption', text:'Coco no tiene camión de lagartijas… ¡se sube al de los niños!', style:'top:6%; left:4%;' },
+        { type:'sfx', size:'med', text:'¡BRINC!', style:'bottom:12%; right:8%;' },
+      ]},
+      { img:'ep01/panel03.png', lettering:[
+        { type:'caption', text:'Su escuela no tiene paredes ni techo.', style:'top:6%; left:4%;' },
+        { type:'sfx', size:'med', text:'¡FIUUU!', style:'top:14%; right:8%;' },
+      ]},
+      { img:'ep01/panel04.png', lettering:[
+        { type:'balloon', who:'Mango', cls:'mango tail-r', text:'¡Coco! ¡Aquí, amigo!', style:'top:6%; right:4%;' },
+      ]},
+      { img:'ep01/panel05.png', lettering:[
+        { type:'sfx', size:'big', text:'¡PUUUUUUM!', style:'top:8%; left:50%; transform:translateX(-50%) rotate(-6deg);' },
+      ]},
+      { img:'ep01/panel06.png', lettering:[
+        { type:'balloon', who:'Coco', cls:'coco tail-l', text:'¡Nos va a caer un rayo! ¿Qué hacemos?', style:'top:7%; left:5%;' },
+        { type:'sfx', size:'sm', text:'¡corre, corre!', style:'top:42%; right:7%;' },
+      ]},
+      { img:'ep01/panel07.png', lettering:[
+        { type:'balloon', who:'Mango', cls:'mango tail-c', text:'Tranquilos… no fue un rayo. Fue el escape de un coche.', style:'top:7%; left:50%; transform:translateX(-50%);' },
+      ]},
+      { img:'ep01/panel08.png', lettering:[
+        { type:'balloon', who:'La maestra', cls:'maestra tail-r', text:'Escuchemos y pensemos antes de asumir lo peor.', style:'top:7%; right:5%;' },
+        { type:'caption', text:'Y la clase, por fin, pudo empezar.', style:'bottom:7%; left:4%;' },
+      ]},
+    ];
+
+    const comic = document.getElementById('comic');
+    PANELS.forEach((p, i) => {
+      const fig = document.createElement('figure');
+      fig.className = 'panel';
+      const img = document.createElement('img');
+      img.src = p.img; img.alt = `Viñeta ${i+1}`; img.loading = 'lazy';
+      const err = document.createElement('div');
+      err.className = 'err';
+      err.innerHTML = `<span style="font-size:1.8rem">⚠️</span><span>Falta la viñeta ${i+1}</span><span style="font:11px monospace;opacity:.7">${p.img}</span>`;
+      img.onerror = () => { console.error(`[Cómic] Falta la viñeta ${i+1}: ${p.img}`); img.style.display='none'; err.style.display='flex'; };
+      fig.appendChild(img); fig.appendChild(err);
+      (p.lettering||[]).forEach(L => {
+        const el = document.createElement('div');
+        el.setAttribute('style', L.style || '');
+        if (L.type === 'balloon') {
+          el.className = 'balloon ' + (L.cls||'');
+          el.innerHTML = (L.who ? `<span class="who">${L.who}</span>` : '') + L.text;
+        } else if (L.type === 'caption') {
+          el.className = 'caption';
+          el.textContent = L.text;
+        } else if (L.type === 'sfx') {
+          el.className = 'sfx ' + (L.size||'med');
+          el.textContent = L.text;
+        }
+        fig.appendChild(el);
+      });
+      comic.appendChild(fig);
+    });
+  </script>
+</body>
+</html>
