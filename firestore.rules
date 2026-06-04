@@ -1,0 +1,25 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    match /stories/{storyId} {
+      allow read: if true;
+      allow create, update: if request.auth != null;
+    }
+
+    match /stories/{storyId}/ratings/{uid} {
+      allow read: if true;
+      allow create, update, delete: if request.auth != null
+        && request.auth.uid == uid
+        && request.auth.token.firebase.sign_in_provider == 'google.com'
+        && request.resource.data.value is number
+        && request.resource.data.value >= 0
+        && request.resource.data.value <= 5;
+    }
+
+    match /users/{uid} {
+      allow read: if true;
+      allow create, update: if request.auth != null && request.auth.uid == uid;
+    }
+  }
+}
