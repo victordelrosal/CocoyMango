@@ -33,6 +33,14 @@ for json in historias/historia*.json; do
   fi
 done
 
+# Literal \uXXXX escape sequences sitting in JSX TEXT content (between >...<) render
+# verbatim as "⚠" on the page instead of the real character. Escapes inside {..}
+# JS expressions or attribute strings are legal and are NOT matched by this check.
+if grep -nE '>[^<{]*\\u[0-9A-Fa-f]{4}' index.html; then
+  echo "  ^-- LITERAL UNICODE ESCAPE in JSX text: use the real character (e.g. the warning sign, o-acute), not a backslash-u escape"
+  fail=1
+fi
+
 if [ "$fail" -ne 0 ]; then
   echo ""
   echo "PREFLIGHT FAILED. Do NOT publish: every story needs a JSON + image and the count must match."
