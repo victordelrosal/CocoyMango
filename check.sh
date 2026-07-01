@@ -21,8 +21,8 @@ for i in $(seq 1 "$count"); do
   n=$(printf '%02d' "$i")
   json="historias/historia${n}.json"
   img="imagenes/imagen${n}.png"
-  [ -f "$json" ] || { echo "  MISSING STORY:  $json"; fail=1; }
-  [ -f "$img" ]  || { echo "  MISSING IMAGE:  $img  <-- story would render cartoonless"; fail=1; }
+  [ -s "$json" ] || { echo "  MISSING/EMPTY STORY:  $json"; fail=1; }
+  [ -s "$img" ]  || { echo "  MISSING/EMPTY IMAGE:  $img  <-- story would render cartoonless"; fail=1; }
 done
 
 # Orphan stories on disk beyond the declared count never display (silent drop).
