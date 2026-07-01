@@ -1,9 +1,0 @@
-# CocoyMango — distilled rules (Crank memory)
-
-- Deploy is a GATED GitHub Actions workflow (`.github/workflows/deploy.yml`), NOT legacy branch-Pages. Pages `build_type=workflow`. The `gate` job runs `./check.sh`; `deploy` has `needs: gate`. A story without its image (or a `\uXXXX` escape in JSX text) fails the gate and the deploy is skipped, last good site stays live. Do NOT revert Pages to "deploy from branch" or the gate is gone.
-- The deploy stages an ALLOWLIST into `_site/` (index.html, juegos.html, imagenes, historias, comics, juegos). The repo is PUBLIC and served the whole tree before, leaking `log/` handoffs on the domain. Anything not in the allowlist never ships. Add new site dirs to the `cp` line in deploy.yml or they won't publish.
-- Residual (needs Victor): the repo itself is PUBLIC, so `log/` + git history are browsable at github.com regardless of the domain 404. Making it private may disable Pages depending on GitHub plan; do not flip it autonomously.
-- ALWAYS generate a story's image yourself (image-gen OpenAI script, 1024x1024 -q high, Character Bible + Colima plaza style), Read the PNG to confirm, before committing. Keys are in `~/.claude/.env` (OPENAI_API_KEY, GEMINI_API_KEY). This project shipped cartoonless 4× (stories 22,23,27-30) — the gate now makes that impossible to reach the live site.
-- Local clone drifts behind origin (multi-machine). `git fetch` and check `git rev-list --count HEAD..origin/main` BEFORE editing, or you may push a stale file and delete live stories.
-- `index.html` is a self-contained React+Babel standalone. Escapes go in JS `{...}` expressions (`{title || ' '}` is fine), NEVER in JSX text (`>⚠<` renders literally). `check.sh` guards this.
-- Edit tool normalizes typed `\uXXXX`/accents to real chars; to match literal backslash-u bytes in a file, build the search string from `chr(92)` in a Python heredoc.
