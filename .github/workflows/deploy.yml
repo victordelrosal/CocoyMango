@@ -1,0 +1,46 @@
+# Coco y Mango — gated GitHub Pages deploy.
+# The `gate` job runs check.sh (every story must have JSON + illustration, and no
+# literal \uXXXX escapes in JSX text). If it fails, `deploy` is skipped and the
+# previously-published site stays live. A cartoonless story can never reach the site.
+name: Deploy (gated) to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  gate:
+    name: Preflight — every story must have its illustration
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run publish preflight
+        run: |
+          chmod +x check.sh
+          ./check.sh
+
+  deploy:
+    name: Deploy to Pages
+    needs: gate
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+      - id: deployment
+        uses: actions/deploy-pages@v4
