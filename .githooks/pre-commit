@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+# Coco y Mango: block any commit that would publish a story without its illustration.
+# Runs the same preflight as ./check.sh. Bypass in a genuine emergency with --no-verify.
+cd "$(git rev-parse --show-toplevel)"
+if [ -x ./check.sh ]; then
+  if ! ./check.sh; then
+    echo ""
+    echo "COMMIT BLOCKED: a story is missing its image (or the count is off)."
+    echo "Generate the illustration first (see the coco-y-mango skill), then commit."
+    exit 1
+  fi
+fi
